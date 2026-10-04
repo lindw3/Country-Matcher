@@ -21,7 +21,11 @@ def _load_owid_series(url, measure, value_hint=None):
     metadata = {entity_column, time_column, columns.get("code")}
     value_columns = [column for column in data.columns if column not in metadata]
     if value_hint:
-        value_columns = [
+        exact_matches = [
+            column for column in value_columns
+            if value_hint.lower() == str(column).lower()
+        ]
+        value_columns = exact_matches or [
             column for column in value_columns
             if value_hint.lower() in str(column).lower()
         ]
@@ -66,453 +70,143 @@ def _load_local_series(path, measure, value_column):
 
 
 def load_data():
-
-    datasets = []
-
-
-    # Livslängd
-    livslängd = pd.read_csv(
-        "https://ourworldindata.org/grapher/life-expectancy.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    livslängd.columns = ["land", "kod", "år", "livslängd"]
-    livslängd = livslängd[["land", "år", "livslängd"]]
-    datasets.append(livslängd)
-
-
-    # Suicid
-    suicid = pd.read_csv(
-        "https://ourworldindata.org/grapher/death-rate-from-suicides-gho.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    suicid.columns = ["land", "kod", "år", "suicid/100k"]
-    suicid = suicid[["land", "år", "suicid/100k"]]
-    datasets.append(suicid)
-
-
-    # Fetma
-    fetma = pd.read_csv(
-        "https://ourworldindata.org/grapher/share-of-adults-defined-as-obese.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    fetma.columns = ["land", "kod", "år", "fetma_andel", "region"]
-    fetma = fetma[["land", "år", "fetma_andel"]]
-    datasets.append(fetma)
-
-
-    # HDI
-    hdi = pd.read_csv(
-        "https://ourworldindata.org/grapher/human-development-index.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    hdi.columns = ["land", "kod", "år", "hdi", "region"]
-    hdi = hdi[["land", "år", "hdi"]]
-    datasets.append(hdi)
-
-
-    # Demokratiindex
-    demokrati = pd.read_csv(
-        "data/electoral-democracy-index.csv"
-    )
-    demokrati.columns = [
-        "land",
-        "år",
-        "demokratiindex",
-        "region"
-    ]
-    demokrati = demokrati[["land", "år", "demokratiindex"]]
-    datasets.append(demokrati)
-
-
-    # CO2
-    co2 = pd.read_csv(
-        "https://ourworldindata.org/grapher/co-emissions-per-capita.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    co2.columns = ["land", "kod", "år", "co2_percapita"]
-    co2 = co2[["land", "år", "co2_percapita"]]
-    datasets.append(co2)
-
-
-    # Energi
-    energi = pd.read_csv(
-        "data/energy-use-per-person.csv"
-    )
-    energi.columns = [
-        "land",
-        "år",
-        "energi_percapita"
-    ]
-    energi = energi[["land", "år", "energi_percapita"]]
-    datasets.append(energi)
-
-
-    # Utbildning
-    utbildning = pd.read_csv(
-        "https://ourworldindata.org/grapher/total-government-expenditure-on-education-gdp.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    utbildning.columns = [
-        "land",
-        "kod",
-        "år",
-        "utbildning_andel_gdp"
-    ]
-    utbildning = utbildning[["land", "år", "utbildning_andel_gdp"]]
-    datasets.append(utbildning)
-
-
-    # Sjukvård
-    sjukvård = pd.read_csv(
-        "https://ourworldindata.org/grapher/public-health-expenditure-share-gdp.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    sjukvård.columns = [
-        "land",
-        "kod",
-        "år",
-        "sjukvård_andel_gdp"
-    ]
-    sjukvård = sjukvård[["land", "år", "sjukvård_andel_gdp"]]
-    datasets.append(sjukvård)
-
-
-    # Lönegap
-    lönegap = pd.read_csv(
-        "https://ourworldindata.org/grapher/gender-gap-in-average-wages-ilo.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    lönegap.columns = [
-        "land",
-        "kod",
-        "år",
-        "lönegap"
-    ]
-    lönegap = lönegap[["land", "år", "lönegap"]]
-    datasets.append(lönegap)
-
-
-    # Kvinnors arbetskraftsdeltagande relativt män
-    andel_kvinnor_arbete = pd.read_csv(
-        "https://ourworldindata.org/grapher/ratio-of-female-to-male-labor-force-participation-rates-ilo-wdi.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    andel_kvinnor_arbete.columns = [
-        "land",
-        "kod",
-        "år",
-        "andel_kvinnor_arbete",
-        "region"
-    ]
-    andel_kvinnor_arbete = andel_kvinnor_arbete[
-        ["land", "år", "andel_kvinnor_arbete"]
-    ]
-    datasets.append(andel_kvinnor_arbete)
-
-
-    # Skolår
-    skolår = pd.read_csv(
-        "https://ourworldindata.org/grapher/average-years-of-schooling.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    skolår.columns = [
-        "land",
-        "kod",
-        "år",
-        "skolår"
-    ]
-    skolår = skolår[["land", "år", "skolår"]]
-    datasets.append(skolår)
-
-
-    # Bistånd
-    bistånd = pd.read_csv(
-        "https://ourworldindata.org/grapher/foreign-aid-given-as-a-share-of-national-income.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    bistånd.columns = [
-        "land",
-        "kod",
-        "år",
-        "bistånd_andel_bni",
-        "annotation"
-    ]
-    bistånd = bistånd[
-        ["land", "år", "bistånd_andel_bni"]
-    ]
-    datasets.append(bistånd)
-
-
-    # Skatt
-    skatt = pd.read_csv(
-        "https://ourworldindata.org/grapher/tax-revenues-as-a-share-of-gdp-unu-wider.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    skatt.columns = [
-        "land",
-        "kod",
-        "år",
-        "skatt_andel_bnp",
-        "region"
-    ]
-    skatt = skatt[
-        ["land", "år", "skatt_andel_bnp"]
-    ]
-    datasets.append(skatt)
-
-
-    # Statliga utgifter
-    statligautgifter = pd.read_csv(
-        "https://ourworldindata.org/grapher/historical-gov-spending-gdp.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    statligautgifter.columns = [
-        "land",
-        "kod",
-        "år",
-        "statligautgifter_andel_bnp",
-        "annotation"
-    ]
-    statligautgifter = statligautgifter[
-        ["land", "år", "statligautgifter_andel_bnp"]
-    ]
-    datasets.append(statligautgifter)
-
-
-    # Gini
-    gini = pd.read_excel(
-        "data/gini.xlsx"
-    )
-    gini.columns = [
-        "land",
-        "år",
-        "gini"
-    ]
-    datasets.append(gini)
-
-
-    # GDP per capita
-    gdp = pd.read_csv(
-        "https://ourworldindata.org/grapher/gdp-per-capita-maddison-project-database.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    gdp.columns = [
-        "land",
-        "kod",
-        "år",
-        "gdp_per_capita",
-        "annotation"
-    ]
-    gdp = gdp[
-        ["land", "år", "gdp_per_capita"]
-    ]
-    datasets.append(gdp)
-
-
-    # Handel
-    handel = pd.read_csv(
-        "https://ourworldindata.org/grapher/trade-as-share-of-gdp.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    handel.columns = [
-        "land",
-        "kod",
-        "år",
-        "handel_andel_gdp"
-    ]
-    handel = handel[
-        ["land", "år", "handel_andel_gdp"]
-    ]
-    datasets.append(handel)
-
-
-    # Livstillfredsställelse
-    livstillfredsställelse = pd.read_csv(
-        "https://ourworldindata.org/grapher/happiness-cantril-ladder.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    livstillfredsställelse.columns = [
-        "land",
-        "kod",
-        "år",
-        "livstillfredsställelse"
-    ]
-    livstillfredsställelse = livstillfredsställelse[
-        ["land", "år", "livstillfredsställelse"]
-    ]
-    datasets.append(livstillfredsställelse)
-
-
-
-    # Barn per kvinna
-    barn = pd.read_csv(
-        "https://ourworldindata.org/grapher/children-born-per-woman.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    barn.columns = [
-        "land",
-        "kod",
-        "år",
-        "barn_per_kvinna"
-    ]
-    barn = barn[
-        ["land", "år", "barn_per_kvinna"]
-    ]
-    datasets.append(barn)
-
-
-    # Korruptionsindex
-    korruption = pd.read_csv(
-        "https://ourworldindata.org/grapher/political-corruption-index.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    korruption.columns = [
-        "land",
-        "kod",
-        "år",
-        "korruption_index",
-        "region"
-    ]
-    korruption = korruption[
-        ["land", "år", "korruption_index"]
-    ]
-    datasets.append(korruption)
-
-
-    # Mord
-    mord = pd.read_csv(
-        "https://ourworldindata.org/grapher/homicide-rate-ghe.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    mord.columns = [
-        "land",
-        "kod",
-        "år",
-        "mord_percapita",
-        "region"
-    ]
-    mord = mord[
-        ["land", "år", "mord_percapita"]
-    ]
-    datasets.append(mord)
-
-
-    # Död i väpnad konflikt
-    död_konflikt = pd.read_csv(
-        "https://ourworldindata.org/grapher/deaths-in-armed-conflicts.csv?v=1&csvType=full&useColumnShortNames=true",
-        **OWID_HEADERS
-    )
-    död_konflikt.columns = [
-        "land",
-        "kod",
-        "år",
-        "död_i_konflikt_percapita_hög",
-        "död_i_konflikt_percapita",
-        "död_i_konflikt_percapita_låg"
-    ]
-    död_konflikt = död_konflikt[
-        ["land", "år", "död_i_konflikt_percapita"]
-    ]
-    datasets.append(död_konflikt)
-
-
-    # Additional candidate measures
-    additional_owid_series = [
+    owid_series = [
+        ("livslängd", "life-expectancy.csv", None),
+        ("suicid/100k", "death-rate-from-suicides-gho.csv", None),
+        ("fetma_andel", "share-of-adults-defined-as-obese.csv", None),
+        ("hdi", "human-development-index.csv", None),
+        ("co2_percapita", "co-emissions-per-capita.csv", None),
+        ("utbildning_andel_gdp", "total-government-expenditure-on-education-gdp.csv", None),
+        ("sjukvård_andel_gdp", "public-health-expenditure-share-gdp.csv", None),
+        ("lönegap", "gender-gap-in-average-wages-ilo.csv", None),
+        ("andel_kvinnor_arbete", "ratio-of-female-to-male-labor-force-participation-rates-ilo-wdi.csv", None),
+        ("skolår", "average-years-of-schooling.csv", None),
+        ("bistånd_andel_bni", "foreign-aid-given-as-a-share-of-national-income.csv", "oda_official_estimate_share_gni"),
+        ("skatt_andel_bnp", "tax-revenues-as-a-share-of-gdp-unu-wider.csv", None),
+        ("statligautgifter_andel_bnp", "historical-gov-spending-gdp.csv", "expenditure"),
+        ("gdp_per_capita", "gdp-per-capita-maddison-project-database.csv", "gdp_per_capita"),
+        ("handel_andel_gdp", "trade-as-share-of-gdp.csv", None),
+        ("livstillfredsställelse", "happiness-cantril-ladder.csv", None),
+        ("barn_per_kvinna", "children-born-per-woman.csv", None),
+        ("korruption_index", "political-corruption-index.csv", None),
+        ("mord_percapita", "homicide-rate-ghe.csv", None),
+        ("död_i_konflikt_percapita", "deaths-in-armed-conflicts.csv", "number_deaths_ongoing_conflicts__conflict_type_all"),
         (
             "share_religious",
-            "https://ourworldindata.org/grapher/religious-composition.csv?v=1&csvType=full&useColumnShortNames=true&religion=any_religion&indicator=share",
+            "religious-composition.csv?religion=any_religion&indicator=share",
             None,
         ),
         (
             "share_trust",
-            "https://ourworldindata.org/grapher/self-reported-trust-attitudes.csv?v=1&csvType=full&useColumnShortNames=true",
+            "self-reported-trust-attitudes.csv",
             None,
         ),
         (
             "women_married_union_share",
-            "https://ourworldindata.org/grapher/share-of-women-aged-1549-who-are-married-or-in-a-union.csv?v=1&csvType=full&useColumnShortNames=true",
+            "share-of-women-aged-1549-who-are-married-or-in-a-union.csv",
             "estimate",
         ),
         (
             "generative_ai_adult_share",
-            "https://ourworldindata.org/grapher/estimated-share-people-generative-ai.csv?v=1&csvType=full&useColumnShortNames=true",
+            "estimated-share-people-generative-ai.csv",
             "ai_user_share",
         ),
         (
             "migrant_population_share",
-            "https://ourworldindata.org/grapher/migrant-stock-share.csv?v=1&csvType=full&useColumnShortNames=true",
+            "migrant-stock-share.csv",
             None,
         ),
         (
             "annual_working_hours",
-            "https://ourworldindata.org/grapher/annual-working-hours-per-worker.csv?v=1&csvType=full&useColumnShortNames=true",
+            "annual-working-hours-per-worker.csv",
             None,
         ),
         (
             "unemployment_rate",
-            "https://ourworldindata.org/grapher/unemployment-rate.csv?v=1&csvType=full&useColumnShortNames=true",
+            "unemployment-rate.csv",
             None,
         ),
         (
             "military_spending_gdp",
-            "https://ourworldindata.org/grapher/military-spending-as-a-share-of-gdp-sipri.csv?v=1&csvType=full&useColumnShortNames=true",
+            "military-spending-as-a-share-of-gdp-sipri.csv",
             None,
         ),
         (
             "armed_forces_labor_share",
-            "https://ourworldindata.org/grapher/armed-forces-personnel-of-total-labor-force.csv?v=1&csvType=full&useColumnShortNames=true",
+            "armed-forces-personnel-of-total-labor-force.csv",
             None,
         ),
         (
             "renewable_energy_share",
-            "https://ourworldindata.org/grapher/energy-mix.csv?v=1&csvType=full&useColumnShortNames=true&source=renewables&metric=share",
+            "energy-mix.csv?source=renewables&metric=share",
             None,
         ),
         (
             "nuclear_energy_share",
-            "https://ourworldindata.org/grapher/energy-mix.csv?v=1&csvType=full&useColumnShortNames=true&source=nuclear&metric=share",
+            "energy-mix.csv?source=nuclear&metric=share",
             None,
         ),
         (
             "electricity_generation_per_capita",
-            "https://ourworldindata.org/grapher/electricity-mix.csv?v=1&csvType=full&useColumnShortNames=true&source=total&metric=per_capita&frequency=annual",
+            "electricity-mix.csv?source=total&metric=per_capita&frequency=annual",
             None,
         ),
         (
             "tobacco_use_adult_share",
-            "https://ourworldindata.org/grapher/share-of-adults-who-smoke.csv?v=1&csvType=full&useColumnShortNames=true",
+            "share-of-adults-who-smoke.csv",
             None,
         ),
         (
             "alcohol_consumption_per_capita",
-            "https://ourworldindata.org/grapher/total-alcohol-consumption-per-capita-litres-of-pure-alcohol.csv?v=1&csvType=full&useColumnShortNames=true",
+            "total-alcohol-consumption-per-capita-litres-of-pure-alcohol.csv",
             None,
         ),
         (
             "pm25_exposure",
-            "https://ourworldindata.org/grapher/average-exposure-pm25-pollution.csv?v=1&csvType=full&useColumnShortNames=true",
+            "average-exposure-pm25-pollution.csv",
             None,
         ),
         (
             "urban_population_share",
-            "https://ourworldindata.org/grapher/long-term-urban-population-region.csv?v=1&csvType=full&useColumnShortNames=true",
+            "long-term-urban-population-region.csv",
             None,
         ),
     ]
-    datasets.extend(
-        _load_owid_series(url, measure, value_hint)
-        for measure, url, value_hint in additional_owid_series
-    )
+    datasets = [
+        _load_owid_series(
+            f"https://ourworldindata.org/grapher/{source}"
+            f"{'&' if '?' in source else '?'}v=1&csvType=full&useColumnShortNames=true",
+            measure,
+            value_hint,
+        )
+        for measure, source, value_hint in owid_series
+    ]
 
-    # This source reports total deaths, not a per-capita rate.
-    datasets.append(
-        _load_local_series(
+    local_csv_series = [
+        (
+            "data/electoral-democracy-index.csv",
+            "demokratiindex",
+            "Electoral democracy index (central estimate)",
+        ),
+        (
+            "data/energy-use-per-person.csv",
+            "energi_percapita",
+            "Primary energy consumption per capita (kWh/person)",
+        ),
+        (
             "data/deaths-in-armed-conflicts-based-on-where-they-occurred.csv",
             "conflict_deaths",
             "Deaths in ongoing conflicts (best estimate) - Conflict type: all",
-        )
+        ),
+    ]
+    datasets.extend(
+        _load_local_series(path, measure, value_column)
+        for path, measure, value_column in local_csv_series
     )
 
+    gini = pd.read_excel("data/gini.xlsx")
+    gini.columns = ["land", "år", "gini"]
+    datasets.append(gini)
 
     return datasets
 

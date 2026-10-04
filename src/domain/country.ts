@@ -22,4 +22,13 @@ export type MatchResult = {
   coverage: number;
   areas: { key: string; label: string; score: number; weight: number }[];
   measureCount: number;
+  details: {
+    label: string;
+    unit: string;
+    value: number;
+    year: number;
+    percentile: number;
+    score: number;
+    area: string;
+  }[];
 };

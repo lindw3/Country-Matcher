@@ -2,9 +2,9 @@
 
 ## Application shape
 
-The site is a Vite-hosted React and TypeScript single-page application. It has no API or account system. `src/App.tsx` owns the current screen, questionnaire position, answers, loaded dataset, and selected country. The screen states are `intro`, `quiz`, `report`, and `methodology`; country detail is rendered inside the report state.
+The site is a Vite-hosted React and TypeScript single-page application with no API or account system. `src/App.tsx` owns the current screen, questionnaire section, answers, loaded dataset, and selected country. Screens are `intro`, `quiz`, `report`, and `methodology`; country detail is rendered inside the report state. There are no separate `/quiz`, `/results`, or country-detail routes.
 
-On startup, the app fetches `/data/countries.json`. Questionnaire answers are loaded from and saved to local storage under `country-matcher-answers-v1`. The current dataset itself is a static JSON file generated before the app is run.
+On startup, the app fetches `${import.meta.env.BASE_URL}data/countries.json`. Answers are stored locally under `country-matcher-answers-v2` using this shape: point values and a point-section skip flag, ideal-statement choices, and median-band choices. Old answer data uses a different local-storage key and is not interpreted as the new schema.
 
 ## Source layout
 
@@ -13,17 +13,17 @@ Country Matcher/
   data/                         # Local OWID extracts and gini.xlsx
   public/data/countries.json    # Generated browser dataset
   scripts/
-    load_data.py               # Source series and variable descriptions
-    create_dataset.py           # Optional historical outer-joined Parquet export
-    prepare_country_data.py     # Latest-country values, percentiles, JSON export
+    load_data.py               # Unified OWID catalog and local source readers
+    create_dataset.py           # Optional historical Parquet export
+    prepare_country_data.py     # Latest country values, percentiles, JSON export
   src/
-    App.tsx                     # Screens and user interactions
+    App.tsx                     # Screens and interactions
     main.tsx                    # React entry point
-    styles.css                  # Design tokens and responsive styles
+    styles.css                  # Visual tokens and responsive layouts
     domain/
-      country.ts                # Country and dataset types
-      questions.ts              # Question and answer definitions
-      matching.ts               # Directions, labels, units, scoring, detail rows
+      country.ts                # Country, dataset, and result types
+      questions.ts              # Point groups, statements, medians, answer types
+      matching.ts               # Median bands, scoring, and evidence rows
   index.html
   package.json
   requirements.txt
@@ -31,57 +31,49 @@ Country Matcher/
 
 ## Browser screens
 
-- **Introduction** shows the purpose, data counts/date, privacy note, and questionnaire entry point.
-- **Questionnaire** displays one prompt at a time, a progress bar, back and continue controls, and a skip action. Existing answers remain when moving backward. Starting over clears the saved answers.
-- **Results** shows the highest-ranked match, three countries in the shortlist, active area scores, and coverage. The top-country rows open its evidence table.
-- **Country breakdown** displays measure, raw value and unit, observation year, peer percentile, and fit contribution. The year is moved under the value on narrow screens.
-- **Methodology** explains the broad scoring rules and limitations; it returns to the screen from which it was opened.
+- **Introduction** describes the comparison, displays dataset counts, and starts the questionnaire when country data has loaded.
+- **Questionnaire** has three sections: allocate ten points, set ideal-society statement preferences, and choose median-relative ranges. It supports back/continue navigation and skipped preferences.
+- **Results** shows the top match, the top-three shortlist, score-group bars, and weighted coverage.
+- **Country breakdown** shows every active measure contribution with raw value and unit, observation year, peer percentile, and fit score.
+- **Methodology** summarizes the scoring rules and limitations and returns to the previous app screen.
 
-There are no `/quiz`, `/results`, `/compare`, or `/countries/:slug` routes in the current implementation. Navigation is handled with local React state.
+## Questionnaire and scoring
 
-## Questionnaire and scoring modules
+`src/domain/questions.ts` defines nine point groups. The respondent allocates exactly ten integer points across them or skips the allocation. The file also defines seven ideal-society statements, each offering “It doesn't matter”, full or partial disagreement, and partial or full agreement; and six median questions. Median questions can be skipped individually.
 
-`src/domain/questions.ts` defines nine importance prompts and three target prompts. Importance responses map to weights 3, 2, 1, or 0 for a skipped area. Target answers map to peer percentiles 10, 30, 50, 70, and 90. Every prompt can be skipped. A target is only scored if the respondent also assigns positive importance to that target's area.
+Ideal response multipliers are 0, -2, -1, +1, and +2. Positive values use the direction associated with agreeing with the statement, negative values reverse that direction, and the absolute value determines the statement's weight. “It doesn't matter” contributes no group.
 
-`src/domain/matching.ts` contains the current direction choices, presentation labels, units, and pure scoring functions. Direction-based values are already represented as country peer percentiles by the Python preparation step. The matching function applies the selected direction, averages available measure scores within each area, then averages area scores according to the respondent's importance weights. A selected target replaces the default direction for that measure (currently relevant to working hours).
+`src/domain/matching.ts` always adds life satisfaction (`livstillfredsställelse`) as a higher-is-better General score with fixed weight 1. Each allocated point group averages the scores of its available measures and uses its point count as a weight. Ideal-statement groups score their configured measures in the agreement direction or its inverse, weighted by multiplier magnitude.
 
-The denominator for coverage is the set of distinct measures active in the respondent's answers. A country needs at least one scored value and coverage of 40% or more. Missing area scores do not contribute to that country's weighted average. Eligible results are sorted by score, with coverage as the tie-breaker; up to twenty results are computed and the page displays the first three.
+For each median question, the browser calculates the median of the latest country values present in `countries.json` and embeds it in a plain-language sentence. For a positive median, the five bands are below 50%, 50-75%, 75-125%, 125-150%, and above 150% of the median. The UI displays boundaries as absolute values with units. Foreign aid is displayed to two decimal places; other rates are rounded to whole percentages. Scoring uses unrounded boundaries. A value in the selected band scores 100; outside it, the score decreases linearly with distance and reaches zero one adjacent-band width beyond the nearest edge. If the median is zero or below, cutoffs use percentiles over distinct observed values instead, avoiding invalid negative ranges and reducing repeated cutoffs; the true median remains visible and the UI explains the fallback.
+
+All active score groups are combined as a weighted average. Each answered median preference has weight one. When only part of a group's measures is available for a country, both its effective score weight and its contribution to coverage are scaled by the available fraction. A country requires at least 40% weighted coverage and some available score weight. Results are ordered by score and then coverage; twenty candidates are computed and the report displays the first three.
+
+The exact currently scored and unused measures are listed in [OVERVIEW.md](OVERVIEW.md).
 
 ## Data preparation
-
-The data path used by the website is:
 
 ```text
 OWID Grapher endpoints + local files in data/
   -> scripts/load_data.py
-  -> one latest non-missing row per country and measure
-  -> canonical country-name lookup
-  -> peer percentile per measure
+  -> latest non-missing row per country and measure
+  -> country-name normalization
+  -> peer percentiles per measure
   -> public/data/countries.json
-  -> browser matching and report
+  -> browser median bands and country scoring
 ```
 
-The JSON root contains `generatedAt`, `countryCount`, `measureCount`, and `countries`. Each country has a `name` and a `measures` object. Each available measure entry contains:
+The JSON root contains `generatedAt`, `countryCount`, `measureCount`, and `countries`. Each country has a `name` and a `measures` object; each measure entry has `value`, `year`, and `percentile`.
 
-```json
-{
-  "value": 12.3,
-  "year": 2024,
-  "percentile": 71.25
-}
-```
+The preparation script computes average-rank percentiles over countries with a value for that measure. It keeps the latest non-missing observation separately for each country and measure. This creates a mixed-year snapshot without a maximum observation age or shared-year rule. Source years travel with values into the country detail view.
 
-Percentiles are computed with pandas' average rank percentile over the country values available for that measure. The preparation step sorts each country's non-missing observations by year and keeps the latest one independently per measure. It therefore produces a mixed-year snapshot; it does not enforce a common year, recency window, or minimum coverage at data-build time. Measure year travels with each value for display.
+`load_data.py` keeps OWID measures in one catalog of internal measure key, Grapher source, and optional source-column hint. A shared adapter identifies `Entity`, `Year` or `Day`, and the value column, then normalizes output to `land`, `år`, and the configured measure key. With no hint, exactly one numeric value column must be identifiable. Hints disambiguate sources with multiple numeric columns. The marriage/union series chooses the observed estimate rather than projections; generative-AI daily rows are reduced to the latest observation per country-year. Local CSVs and the Gini workbook use local readers. The variable description table covers all forty loaded measures.
 
-`load_data.py` loads the original indicator set and all sixteen additional OWID measures specified for the project. It also loads the local conflict-deaths CSV as an absolute count. Its `variable_descriptions` table documents all forty resulting series. The marriage/union adapter selects the observed estimate column and excludes projected values. The AI adapter selects `ai_user_share`, converts date rows to years, and keeps the latest row per country-year. Other new Grapher adapters identify `Entity`, `Year` or `Day`, and the measure column from the response schema. Several earlier series still use explicit positional column renaming.
-
-The local sources include electoral democracy, per-person primary energy use, Gini (`data/gini.xlsx`), and conflict deaths. Country names are converted with `pycountry.countries.lookup` and aliases for selected alternate names. Entries that do not resolve are discarded; ISO-recognized territories can be included.
-
-`scripts/create_dataset.py` remains a separate utility that outer-joins all loaded series on country and year and writes `data/combined_dataset.parquet`. The browser preparation script does not use that Parquet file.
+Country names are normalized through `pycountry.countries.lookup` with a small alias map. Unresolved names are omitted; recognized territories can appear. `scripts/create_dataset.py` separately creates an outer-joined historical Parquet file; the website does not read it.
 
 ## Current boundaries
 
-- The generated JSON includes all loaded measures, but only the curated subset listed in [OVERVIEW.md](OVERVIEW.md) currently affects rankings.
-- The JSON does not carry source URLs or full per-measure provenance metadata. Source endpoints and local paths are in `scripts/load_data.py`; source citations are not yet shown on each country detail row.
-- The data snapshot is generated locally and must exist before the website can display matches. If it is missing or cannot be fetched, the start action remains unavailable and the app displays a data error.
-- There is no automated test suite configured yet. `npm run build` runs TypeScript's project build and creates the Vite production bundle.
+- All 40 loaded measures appear in the generated snapshot. Thirty-two affect questionnaire questions or scores; the other eight are named in [OVERVIEW.md](OVERVIEW.md).
+- Country detail displays value, year, percentile, and fit, but not per-row OWID source URLs.
+- The country snapshot must be generated before serving the app. The GitHub Pages workflow regenerates it during deployment.
+- There is no automated test suite configured. `npm run build` performs the TypeScript project build and Vite production bundle.

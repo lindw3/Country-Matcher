@@ -1,102 +1,170 @@
-export type Importance = "essential" | "important" | "some" | "skip";
-export type TargetChoice = "much-lower" | "lower" | "median" | "higher" | "much-higher" | "skip";
-export type Answer = Importance | TargetChoice;
-export type Answers = Record<string, Answer>;
-export type Question = {
-  id: string;
-  type: "priority" | "target";
-  area: string;
-  areaLabel: string;
-  title: string;
-  detail: string;
-  measures: string[];
+export type Direction = "high" | "low";
+export type IdealChoice = "doesnt-matter" | "disagree-fully" | "disagree-somewhat" | "agree-somewhat" | "agree-fully";
+export type MedianChoice = "much-lower" | "slightly-lower" | "near-median" | "slightly-higher" | "much-higher" | "skip";
+export type Answers = {
+  points: Record<string, number>;
+  pointsSkipped: boolean;
+  ideals: Record<string, IdealChoice>;
+  medians: Record<string, MedianChoice>;
 };
 
-export const questions: Question[] = [
+export const TOTAL_PRIORITY_POINTS = 10;
+
+export type PointGroup = {
+  id: string;
+  label: string;
+  measures: { key: string; direction: Direction }[];
+};
+
+export const pointGroups: PointGroup[] = [
   {
-    id: "priority-institutions", type: "priority", area: "institutions", areaLabel: "Democracy & institutions",
-    title: "How much should democracy and trustworthy institutions matter?",
-    detail: "Electoral democracy and public-sector corruption are broad, imperfect indicators.",
-    measures: ["demokratiindex", "korruption_index"],
+    id: "energy",
+    label: "Reliable, abundant energy",
+    measures: [
+      { key: "electricity_generation_per_capita", direction: "high" },
+      { key: "energi_percapita", direction: "high" },
+    ],
   },
   {
-    id: "priority-equality", type: "priority", area: "equality", areaLabel: "Equality & opportunity",
-    title: "How much should equality of opportunity and income matter?",
-    detail: "The comparison uses income inequality and gender gaps in wages and work participation.",
-    measures: ["gini", "lönegap", "andel_kvinnor_arbete"],
+    id: "institutions",
+    label: "Democratic institutions and low corruption",
+    measures: [
+      { key: "demokratiindex", direction: "high" },
+      { key: "korruption_index", direction: "low" },
+    ],
   },
   {
-    id: "priority-safety", type: "priority", area: "safety", areaLabel: "Safety",
-    title: "How important is a safer everyday life?",
-    detail: "Homicide rates are one limited indicator of personal safety.",
-    measures: ["mord_percapita"],
+    id: "equality",
+    label: "Equality and gender opportunity",
+    measures: [
+      { key: "lönegap", direction: "low" },
+      { key: "andel_kvinnor_arbete", direction: "high" },
+      { key: "gini", direction: "low" },
+    ],
   },
   {
-    id: "priority-wellbeing", type: "priority", area: "wellbeing", areaLabel: "Health & wellbeing",
-    title: "How much should health and life satisfaction count?",
-    detail: "Life expectancy, self-reported life satisfaction, and suicide rates are included.",
-    measures: ["livslängd", "livstillfredsställelse", "suicid/100k"],
+    id: "trust",
+    label: "Social trust",
+    measures: [{ key: "share_trust", direction: "high" }],
   },
   {
-    id: "priority-prosperity", type: "priority", area: "prosperity", areaLabel: "Prosperity & work",
-    title: "How much should material prosperity and access to work matter?",
-    detail: "GDP per person and unemployment provide a partial picture, not a measure of wealth distribution or job quality.",
-    measures: ["gdp_per_capita", "unemployment_rate"],
+    id: "education",
+    label: "Education",
+    measures: [
+      { key: "skolår", direction: "high" },
+      { key: "utbildning_andel_gdp", direction: "high" },
+    ],
   },
   {
-    id: "priority-environment", type: "priority", area: "environment", areaLabel: "Environment & energy",
-    title: "How important are cleaner air and lower-carbon energy?",
-    detail: "CO2 emissions, PM2.5 exposure, and renewable energy share are compared.",
-    measures: ["co2_percapita", "pm25_exposure", "renewable_energy_share"],
+    id: "health",
+    label: "Public healthcare investment",
+    measures: [{ key: "sjukvård_andel_gdp", direction: "high" }],
   },
   {
-    id: "priority-community", type: "priority", area: "community", areaLabel: "Community & belonging",
-    title: "How much should social trust and community matter?",
-    detail: "Self-reported trust is one available proxy; it does not capture every dimension of belonging.",
-    measures: ["share_trust"],
+    id: "prosperity",
+    label: "Prosperity and employment",
+    measures: [
+      { key: "gdp_per_capita", direction: "high" },
+      { key: "unemployment_rate", direction: "low" },
+    ],
   },
   {
-    id: "priority-services", type: "priority", area: "services", areaLabel: "Public services",
-    title: "How much should education and public services matter?",
-    detail: "Average schooling and health and education spending are incomplete indicators.",
-    measures: ["skolår", "utbildning_andel_gdp", "sjukvård_andel_gdp"],
+    id: "climate",
+    label: "Lower carbon emissions",
+    measures: [{ key: "co2_percapita", direction: "low" }],
   },
   {
-    id: "priority-worklife", type: "priority", area: "worklife", areaLabel: "Work & daily life",
-    title: "How important is the balance between work and time outside work?",
-    detail: "Annual working hours per worker are available for many, but not all, countries.",
-    measures: ["annual_working_hours"],
-  },
-  {
-    id: "target-migration", type: "target", area: "community", areaLabel: "Community & belonging",
-    title: "What level of immigration feels right for a society?",
-    detail: "This is the share of residents born in another country. It describes migration history, not current immigration policy.",
-    measures: ["migrant_population_share"],
-  },
-  {
-    id: "target-religion", type: "target", area: "community", areaLabel: "Community & belonging",
-    title: "What place should religion have in society?",
-    detail: "The source estimates the share identifying with any religion; it does not measure religious freedom or practice.",
-    measures: ["share_religious"],
-  },
-  {
-    id: "target-hours", type: "target", area: "worklife", areaLabel: "Work & daily life",
-    title: "How many working hours should be typical?",
-    detail: "Choose your preference relative to other countries, not a precise number of hours.",
-    measures: ["annual_working_hours"],
+    id: "safety",
+    label: "Personal safety",
+    measures: [{ key: "mord_percapita", direction: "low" }],
   },
 ];
 
-export const importanceOptions: { value: Importance; label: string; score: number }[] = [
-  { value: "essential", label: "Essential", score: 3 },
-  { value: "important", label: "Important", score: 2 },
-  { value: "some", label: "Somewhat", score: 1 },
+export const idealOptions: { value: IdealChoice; label: string; multiplier: number }[] = [
+  { value: "doesnt-matter", label: "It doesn't matter", multiplier: 0 },
+  { value: "disagree-fully", label: "I don't agree at all", multiplier: -2 },
+  { value: "disagree-somewhat", label: "I somewhat disagree", multiplier: -1 },
+  { value: "agree-somewhat", label: "I somewhat agree", multiplier: 1 },
+  { value: "agree-fully", label: "I agree fully", multiplier: 2 },
 ];
 
-export const targetOptions: { value: TargetChoice; label: string; percentile?: number }[] = [
-  { value: "much-lower", label: "Much lower", percentile: 10 },
-  { value: "lower", label: "A little lower", percentile: 30 },
-  { value: "median", label: "Near the middle", percentile: 50 },
-  { value: "higher", label: "A little higher", percentile: 70 },
-  { value: "much-higher", label: "Much higher", percentile: 90 },
+export type IdealStatement = {
+  id: string;
+  statement: string;
+  measures: { key: string; agreeDirection: Direction }[];
+};
+
+export const idealStatements: IdealStatement[] = [
+  {
+    id: "healthy-lifestyle",
+    statement: "A healthy lifestyle is common.",
+    measures: [
+      { key: "tobacco_use_adult_share", agreeDirection: "low" },
+      { key: "alcohol_consumption_per_capita", agreeDirection: "low" },
+      { key: "fetma_andel", agreeDirection: "low" },
+    ],
+  },
+  {
+    id: "traditional-family",
+    statement: "Traditional family values have an important place in society.",
+    measures: [
+      { key: "women_married_union_share", agreeDirection: "high" },
+      { key: "barn_per_kvinna", agreeDirection: "high" },
+    ],
+  },
+  {
+    id: "urban-life",
+    statement: "A large share of people live in urban areas.",
+    measures: [{ key: "urban_population_share", agreeDirection: "high" }],
+  },
+  {
+    id: "religion",
+    statement: "Religion has a visible place in society.",
+    measures: [{ key: "share_religious", agreeDirection: "high" }],
+  },
+  {
+    id: "work-hours",
+    statement: "People have shorter working hours and more time outside work.",
+    measures: [{ key: "annual_working_hours", agreeDirection: "low" }],
+  },
+  {
+    id: "migration",
+    statement: "A substantial share of residents were born in another country.",
+    measures: [{ key: "migrant_population_share", agreeDirection: "high" }],
+  },
+  {
+    id: "generative-ai",
+    statement: "AI plays an important role in people's daily lives.",
+    measures: [{ key: "generative_ai_adult_share", agreeDirection: "high" }],
+  },
 ];
+
+export type MedianQuestion = {
+  id: string;
+  label: string;
+  medianSentence: string;
+  measure: string;
+  unit: string;
+  displayDecimals: number;
+};
+
+export const medianQuestions: MedianQuestion[] = [
+  { id: "aid", label: "Foreign aid", medianSentence: "The median country spends about {value} percent of its Gross National Income (GNI) on foreign aid.", measure: "bistånd_andel_bni", unit: "% of GNI", displayDecimals: 2 },
+  { id: "tax", label: "Tax revenue", medianSentence: "The median country collects about {value} percent of its Gross Domestic Product (GDP) in taxes.", measure: "skatt_andel_bnp", unit: "% of GDP", displayDecimals: 0 },
+  { id: "government-spending", label: "Government spending", medianSentence: "The median country spends about {value} percent of its GDP through government expenditure.", measure: "statligautgifter_andel_bnp", unit: "% of GDP", displayDecimals: 0 },
+  { id: "military", label: "Military spending", medianSentence: "The median country spends about {value} percent of its GDP on the military.", measure: "military_spending_gdp", unit: "% of GDP", displayDecimals: 0 },
+  { id: "renewable-energy", label: "Renewable energy", medianSentence: "The median country gets about {value} percent of its primary energy from renewable sources.", measure: "renewable_energy_share", unit: "% of primary energy", displayDecimals: 0 },
+  { id: "nuclear-energy", label: "Nuclear energy", medianSentence: "The median country gets about {value} percent of its primary energy from nuclear power.", measure: "nuclear_energy_share", unit: "% of primary energy", displayDecimals: 0 },
+];
+
+export const medianOptions: { value: Exclude<MedianChoice, "skip">; label: string }[] = [
+  { value: "much-lower", label: "Much lower" },
+  { value: "slightly-lower", label: "Slightly lower" },
+  { value: "near-median", label: "Around the median" },
+  { value: "slightly-higher", label: "Slightly higher" },
+  { value: "much-higher", label: "Much higher" },
+];
+
+export function createEmptyAnswers(): Answers {
+  return { points: {}, pointsSkipped: false, ideals: {}, medians: {} };
+}

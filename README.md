@@ -32,7 +32,7 @@ In the repository settings, set **Pages → Build and deployment → Source** to
 ## Project map
 
 - `src/App.tsx` contains the app screens and interactions.
-- `src/domain/questions.ts` defines the twelve questionnaire prompts and their answer choices.
+- `src/domain/questions.ts` defines the point groups, ideal-society statements, median questions, and answer types.
 - `src/domain/matching.ts` contains the current fit-scoring rules and country detail metadata.
 - `src/domain/country.ts` defines the browser data types.
 - `src/styles.css` defines the visual system and responsive layouts.

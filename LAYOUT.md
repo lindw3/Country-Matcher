@@ -23,15 +23,21 @@ The top bar contains the Country Matcher mark, current country/measure counts, a
 
 ## Introduction
 
-The first screen describes the task in brief, shows the current snapshot date and dataset counts, offers a single start action, and states that answers stay in the browser. The start action is disabled until the country JSON is available.
+The first screen describes the task, displays country and measure counts, offers a start action, and states that answers stay in the browser. The start action is disabled until the country JSON is available.
 
 ## Questionnaire
 
-One question is shown per screen with its area label, a `current / total` indicator, a progress bar, a back action, and a continue action. Answering does not auto-advance. Continue is enabled after choosing an option or explicitly skipping the question.
+The questionnaire has three sections with a `current / total` indicator, progress bar, back action, and continue action. Previous responses remain selected when navigating back.
 
-Importance questions use three full-width choice rows: Essential, Important, and Somewhat. Target questions use five percentile-position choices from Much lower to Much higher, with Near the middle as the center. Every question has a separate “Skip this question” control; skipped importance areas have zero weight, and skipped targets add no target preference. Previous answers remain selected when navigating back.
+The first section lists nine shared-foundation groups with minus/plus steppers. The respondent allocates ten points total, including the option to put all points in one group. Continue stays disabled until ten points are assigned; a separate action skips this section.
 
-Supporting text explains which indicators are associated with each prompt and their limitations. The question-side note explains whether the answer controls area weight or a preferred target.
+The second section lists seven “My ideal society is characterized by…” statements. Each statement has five visible radio choices arranged horizontally beside it: “It doesn't matter”, “I don't agree at all”, “I somewhat disagree”, “I somewhat agree”, and “I agree fully”. Statement rows do not include measure-description subtitles.
+
+The third section lists six measures. Each starts with a sentence that states the median in plain language, followed by “How much do you think is appropriate?” Five absolute ranges and a skip action follow. Foreign-aid values show two decimal places; the other rates show whole percentages. If the median is zero or below, the interface explains that ranges use percentile cutoffs across distinct observed values instead.
+
+The “How it works” panel is top-aligned beside the questionnaire on desktop and appears above the current question section on smaller screens.
+
+Supporting text explains how allocated points, signed agreement multipliers, selected bands, and the always-included general life-satisfaction score affect the comparison.
 
 ## Results and evidence
 

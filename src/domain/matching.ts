@@ -1,247 +1,317 @@
-import type { Country, CountryDataset, MatchResult } from "./country";
-import type { Answers, Importance, TargetChoice } from "./questions";
-import { importanceOptions, questions, targetOptions } from "./questions";
-
-export const areaDefinitions = [
-  { key: "institutions", label: "Democracy & institutions" },
-  { key: "equality", label: "Equality & opportunity" },
-  { key: "safety", label: "Safety" },
-  { key: "wellbeing", label: "Health & wellbeing" },
-  { key: "prosperity", label: "Prosperity & work" },
-  { key: "environment", label: "Environment & energy" },
-  { key: "community", label: "Community & belonging" },
-  { key: "services", label: "Public services" },
-  { key: "worklife", label: "Work & daily life" },
-];
-
-const measureDirections: Record<string, "high" | "low"> = {
-  demokratiindex: "high",
-  korruption_index: "low",
-  gini: "low",
-  lönegap: "low",
-  andel_kvinnor_arbete: "high",
-  mord_percapita: "low",
-  "livslängd": "high",
-  livstillfredsställelse: "high",
-  "suicid/100k": "low",
-  gdp_per_capita: "high",
-  unemployment_rate: "low",
-  co2_percapita: "low",
-  pm25_exposure: "low",
-  renewable_energy_share: "high",
-  share_trust: "high",
-  "skolår": "high",
-  utbildning_andel_gdp: "high",
-  sjukvård_andel_gdp: "high",
-  annual_working_hours: "low",
-};
+import type { Country, CountryDataset, CountryMeasure, MatchResult } from "./country";
+import type { Answers, Direction, IdealChoice, MedianChoice } from "./questions";
+import {
+  idealOptions,
+  idealStatements,
+  medianOptions,
+  medianQuestions,
+  pointGroups,
+} from "./questions";
 
 const measureLabels: Record<string, string> = {
+  livstillfredsställelse: "Life satisfaction",
+  electricity_generation_per_capita: "Electricity generation per person",
+  energi_percapita: "Energy use per person",
   demokratiindex: "Electoral democracy",
   korruption_index: "Political corruption index",
-  gini: "Income inequality (Gini)",
   lönegap: "Gender wage gap",
   andel_kvinnor_arbete: "Women's work participation relative to men's",
-  mord_percapita: "Homicide rate",
-  "livslängd": "Life expectancy",
-  livstillfredsställelse: "Life satisfaction",
-  "suicid/100k": "Suicide rate",
-  gdp_per_capita: "GDP per person",
-  unemployment_rate: "Unemployment rate",
-  co2_percapita: "CO2 emissions per person",
-  pm25_exposure: "PM2.5 exposure",
-  renewable_energy_share: "Renewable energy share",
+  gini: "Income inequality (Gini)",
   share_trust: "People who say others can be trusted",
   "skolår": "Average years of schooling",
   utbildning_andel_gdp: "Education spending as a share of GDP",
   sjukvård_andel_gdp: "Public health spending as a share of GDP",
+  gdp_per_capita: "GDP per person",
+  unemployment_rate: "Unemployment rate",
+  co2_percapita: "CO2 emissions per person",
+  mord_percapita: "Homicide rate",
+  tobacco_use_adult_share: "Adult tobacco use",
+  alcohol_consumption_per_capita: "Alcohol consumption per person",
+  fetma_andel: "Adult obesity prevalence",
+  women_married_union_share: "Women aged 15-49 married or in a union",
+  barn_per_kvinna: "Children per woman",
+  urban_population_share: "Urban population share",
+  share_religious: "Population identifying with a religion",
   annual_working_hours: "Annual working hours per worker",
   migrant_population_share: "Residents born in another country",
-  share_religious: "Population identifying with a religion",
+  generative_ai_adult_share: "Adult generative AI use",
+  bistånd_andel_bni: "Foreign aid as a share of GNI",
+  skatt_andel_bnp: "Tax revenue as a share of GDP",
+  statligautgifter_andel_bnp: "Government spending as a share of GDP",
+  military_spending_gdp: "Military spending as a share of GDP",
+  renewable_energy_share: "Renewable energy share",
+  nuclear_energy_share: "Nuclear energy share",
 };
 
 const measureUnits: Record<string, string> = {
+  livstillfredsställelse: "scale (0-10)",
+  electricity_generation_per_capita: "kWh per person",
+  energi_percapita: "kWh per person",
   demokratiindex: "index (0-1)",
   korruption_index: "index",
-  gini: "index (0-1)",
   lönegap: "%",
   andel_kvinnor_arbete: "ratio",
-  mord_percapita: "per 100,000 people",
-  "livslängd": "years",
-  livstillfredsställelse: "scale (0-10)",
-  "suicid/100k": "per 100,000 people",
-  gdp_per_capita: "international dollars per person",
-  unemployment_rate: "% of labour force",
-  co2_percapita: "tonnes per person",
-  pm25_exposure: "µg/m³",
-  renewable_energy_share: "% of primary energy",
+  gini: "index (0-1)",
   share_trust: "%",
   "skolår": "years",
   utbildning_andel_gdp: "% of GDP",
   sjukvård_andel_gdp: "% of GDP",
+  gdp_per_capita: "international dollars per person",
+  unemployment_rate: "% of labour force",
+  co2_percapita: "tonnes per person",
+  mord_percapita: "per 100,000 people",
+  tobacco_use_adult_share: "%",
+  alcohol_consumption_per_capita: "litres per person",
+  fetma_andel: "%",
+  women_married_union_share: "%",
+  barn_per_kvinna: "children per woman",
+  urban_population_share: "%",
+  share_religious: "%",
   annual_working_hours: "hours per worker",
   migrant_population_share: "%",
-  share_religious: "%",
+  generative_ai_adult_share: "%",
+  bistånd_andel_bni: "% of GNI",
+  skatt_andel_bnp: "% of GDP",
+  statligautgifter_andel_bnp: "% of GDP",
+  military_spending_gdp: "% of GDP",
+  renewable_energy_share: "% of primary energy",
+  nuclear_energy_share: "% of primary energy",
 };
 
-const importanceWeight = (answer: string | undefined): number =>
-  importanceOptions.find((option) => option.value === answer)?.score ?? 0;
+type MedianBand = {
+  value: Exclude<MedianChoice, "skip">;
+  lower: number | null;
+  upper: number | null;
+  lowerDecay: number;
+  upperDecay: number;
+};
 
-const areaWeightsFromAnswers = (answers: Answers) => {
-  const weights: Record<string, number> = {};
-  for (const area of areaDefinitions) {
-    weights[area.key] = importanceWeight(answers[`priority-${area.key}`]);
+type MeasurePreference = {
+  key: string;
+  direction: Direction;
+  band?: MedianBand;
+};
+
+type ScoreGroup = {
+  key: string;
+  label: string;
+  weight: number;
+  measures: MeasurePreference[];
+};
+
+export type MeasureDetail = {
+  label: string;
+  unit: string;
+  value: number;
+  year: number;
+  percentile: number;
+  score: number;
+  area: string;
+};
+
+export type DisplayMedianBand = MedianBand & { label: string };
+
+const percentile = (values: number[], fraction: number) => {
+  const position = (values.length - 1) * fraction;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  if (lower === upper) return values[lower];
+  return values[lower] + (values[upper] - values[lower]) * (position - lower);
+};
+
+export function getMedianBands(dataset: CountryDataset, measure: string): {
+  median: number;
+  unit: string;
+  usesSpreadFallback: boolean;
+  bands: DisplayMedianBand[];
+} | null {
+  const values = dataset.countries
+    .map((country) => country.measures[measure]?.value)
+    .filter((value): value is number => value !== undefined && Number.isFinite(value))
+    .sort((left, right) => left - right);
+  if (values.length === 0) return null;
+
+  const median = percentile(values, 0.5);
+  const usesSpreadFallback = median <= 0;
+  const fallbackValues = usesSpreadFallback ? [...new Set(values)] : values;
+  const boundaries = usesSpreadFallback
+    ? [percentile(fallbackValues, 0.2), percentile(fallbackValues, 0.4), percentile(fallbackValues, 0.6), percentile(fallbackValues, 0.8)]
+    : [0.5 * median, 0.75 * median, 1.25 * median, 1.5 * median];
+  const question = medianQuestions.find((item) => item.measure === measure);
+  const units = question?.unit ?? "";
+  const valuesText = (value: number) => {
+    const formatted = formatMedianValue(value, question?.displayDecimals ?? 0);
+    return `${formatted}${units.startsWith("%") ? "" : " "}${units}`;
+  };
+  const rangeWidths = boundaries.slice(1).map((value, index) => Math.max(value - boundaries[index], 1e-9));
+
+  const definitions: DisplayMedianBand[] = [
+    { value: "much-lower", label: `Below ${valuesText(boundaries[0])}`, lower: null, upper: boundaries[0], lowerDecay: 1e-9, upperDecay: rangeWidths[0] },
+    { value: "slightly-lower", label: `From ${valuesText(boundaries[0])} to ${valuesText(boundaries[1])}`, lower: boundaries[0], upper: boundaries[1], lowerDecay: rangeWidths[0], upperDecay: rangeWidths[1] },
+    { value: "near-median", label: `From ${valuesText(boundaries[1])} to ${valuesText(boundaries[2])}`, lower: boundaries[1], upper: boundaries[2], lowerDecay: rangeWidths[0], upperDecay: rangeWidths[2] },
+    { value: "slightly-higher", label: `From ${valuesText(boundaries[2])} to ${valuesText(boundaries[3])}`, lower: boundaries[2], upper: boundaries[3], lowerDecay: rangeWidths[1], upperDecay: rangeWidths[2] },
+    { value: "much-higher", label: `Above ${valuesText(boundaries[3])}`, lower: boundaries[3], upper: null, lowerDecay: rangeWidths[2], upperDecay: 1e-9 },
+  ];
+
+  return {
+    median,
+    unit: units,
+    usesSpreadFallback,
+    bands: definitions,
+  };
+}
+
+function medianPreferenceScore(value: number, band: MedianBand) {
+  const insideLower = band.lower === null || value >= band.lower;
+  const insideUpper = band.upper === null || value <= band.upper;
+  if (insideLower && insideUpper) return 100;
+
+  const below = band.lower !== null && value < band.lower;
+  const distance = below
+    ? band.lower! - value
+    : band.upper !== null && value > band.upper
+      ? value - band.upper
+      : 0;
+  const decayDistance = Math.max(below ? band.lowerDecay : band.upperDecay, 1e-9);
+  return Math.max(0, 100 - (distance / decayDistance) * 100);
+}
+
+function makeScoreGroups(dataset: CountryDataset, answers: Answers): ScoreGroup[] {
+  const groups: ScoreGroup[] = [
+    {
+      key: "general-score",
+      label: "General score",
+      weight: 1,
+      measures: [{ key: "livstillfredsställelse", direction: "high" }],
+    },
+  ];
+
+  if (!answers.pointsSkipped) {
+    for (const group of pointGroups) {
+      const weight = answers.points[group.id] ?? 0;
+      if (weight > 0) groups.push({ key: `points-${group.id}`, label: group.label, weight, measures: group.measures });
+    }
   }
-  return weights;
-};
 
-const chosenTarget = (answer: string | undefined): number | undefined =>
-  targetOptions.find((option) => option.value === answer)?.percentile;
+  for (const statement of idealStatements) {
+    const choice = answers.ideals[statement.id];
+    const multiplier = idealOptions.find((option) => option.value === choice)?.multiplier ?? 0;
+    if (multiplier === 0) continue;
+    const directionSign = Math.sign(multiplier);
+    groups.push({
+      key: `ideal-${statement.id}`,
+      label: statement.statement,
+      weight: Math.abs(multiplier),
+      measures: statement.measures.map((measure) => ({
+        key: measure.key,
+        direction: directionSign > 0
+          ? measure.agreeDirection
+          : measure.agreeDirection === "high" ? "low" : "high",
+      })),
+    });
+  }
 
-type Contribution = { value: number; year: number; score: number; measure: string };
+  for (const question of medianQuestions) {
+    const choice = answers.medians[question.id];
+    if (!choice || choice === "skip") continue;
+    const bands = getMedianBands(dataset, question.measure);
+    const band = bands?.bands.find((item) => item.value === choice);
+    if (!bands || !band) continue;
+    groups.push({
+      key: `median-${question.id}`,
+      label: question.label,
+      weight: 1,
+      measures: [{ key: question.measure, direction: "high", band }],
+    });
+  }
+
+  return groups;
+}
+
+function scoreMeasure(fact: CountryMeasure, preference: MeasurePreference) {
+  if (preference.band) return medianPreferenceScore(fact.value, preference.band);
+  return preference.direction === "high" ? fact.percentile : 100 - fact.percentile;
+}
+
+function scoreCountry(country: Country, groups: ScoreGroup[]): MatchResult | null {
+  let weightedScore = 0;
+  let effectiveWeight = 0;
+  let expectedWeight = 0;
+  let coveredWeight = 0;
+  const areaScores: MatchResult["areas"] = [];
+  const details: MeasureDetail[] = [];
+  const matchedMeasures = new Set<string>();
+
+  for (const group of groups) {
+    expectedWeight += group.weight;
+    const available = group.measures.flatMap((preference) => {
+      const fact = country.measures[preference.key];
+      if (!fact) return [];
+      const score = scoreMeasure(fact, preference);
+      details.push({
+        label: measureLabels[preference.key] ?? preference.key,
+        unit: measureUnits[preference.key] ?? "",
+        value: fact.value,
+        year: fact.year,
+        percentile: fact.percentile,
+        score,
+        area: group.label,
+      });
+      matchedMeasures.add(preference.key);
+      return [score];
+    });
+    if (available.length === 0) continue;
+
+    const availableFraction = available.length / group.measures.length;
+    const groupWeight = group.weight * availableFraction;
+    const groupScore = available.reduce((sum, score) => sum + score, 0) / available.length;
+    weightedScore += groupScore * groupWeight;
+    effectiveWeight += groupWeight;
+    coveredWeight += groupWeight;
+    areaScores.push({ key: group.key, label: group.label, score: groupScore, weight: groupWeight });
+  }
+
+  const coverage = expectedWeight > 0 ? coveredWeight / expectedWeight : 0;
+  if (effectiveWeight === 0 || coverage < 0.4) return null;
+
+  return {
+    country,
+    score: weightedScore / effectiveWeight,
+    coverage,
+    areas: areaScores.sort((left, right) => right.score - left.score),
+    measureCount: matchedMeasures.size,
+    details,
+  };
+}
 
 export function scoreCountries(dataset: CountryDataset, answers: Answers): MatchResult[] {
-  const areaWeights = areaWeightsFromAnswers(answers);
-  const targetedMeasures = new Set(questions.flatMap((question) =>
-    question.type === "target"
-      && areaWeights[question.area] > 0
-      && chosenTarget(answers[question.id]) !== undefined
-      ? question.measures
-      : [],
-  ));
-  const activeQuestions = questions.filter((question) => {
-    if (question.type === "priority") return areaWeights[question.area] > 0;
-    return areaWeights[question.area] > 0 && chosenTarget(answers[question.id]) !== undefined;
-  });
-  const expectedMeasureKeys = new Set(activeQuestions.flatMap((question) => question.measures));
-  if (expectedMeasureKeys.size === 0) return [];
-
+  const groups = makeScoreGroups(dataset, answers);
   return dataset.countries
-    .map((country) => scoreCountry(country, answers, areaWeights, expectedMeasureKeys, targetedMeasures))
+    .map((country) => scoreCountry(country, groups))
     .filter((result): result is MatchResult => result !== null)
     .sort((left, right) => right.score - left.score || right.coverage - left.coverage)
     .slice(0, 20);
 }
 
-function scoreCountry(
-  country: Country,
-  answers: Answers,
-  areaWeights: Record<string, number>,
-  expectedMeasureKeys: Set<string>,
-  targetedMeasures: Set<string>,
-): MatchResult | null {
-  const areaContributions = new Map<string, Contribution[]>();
-  const usedMeasures = new Set<string>();
-
-  for (const question of questions) {
-    const areaWeight = areaWeights[question.area] ?? 0;
-    if (areaWeight <= 0) continue;
-    const answer = answers[question.id];
-    if (question.type === "priority") {
-      for (const measure of question.measures) {
-        const fact = country.measures[measure];
-        if (!fact || usedMeasures.has(measure) || targetedMeasures.has(measure)) continue;
-        const direction = measureDirections[measure];
-        if (!direction) continue;
-        const score = direction === "high" ? fact.percentile : 100 - fact.percentile;
-        addContribution(areaContributions, question.area, {
-          value: fact.value, year: fact.year, score, measure,
-        });
-        usedMeasures.add(measure);
-      }
-      continue;
-    }
-
-    const target = chosenTarget(answer);
-    const targetMeasure = question.measures[0];
-    const fact = country.measures[targetMeasure];
-    if (target === undefined || !fact) continue;
-    addContribution(areaContributions, question.area, {
-      value: fact.value,
-      year: fact.year,
-      score: Math.max(0, 100 - Math.abs(fact.percentile - target)),
-      measure: targetMeasure,
-    });
-    usedMeasures.add(targetMeasure);
-  }
-
-  const areaScores = [...areaContributions.entries()].flatMap(([key, contributions]) => {
-    if (!contributions.length) return [];
-    return [{
-      key,
-      label: areaDefinitions.find((area) => area.key === key)?.label ?? key,
-      score: contributions.reduce((sum, item) => sum + item.score, 0) / contributions.length,
-      weight: areaWeights[key],
-    }];
-  });
-  const totalWeight = areaScores.reduce((sum, area) => sum + area.weight, 0);
-  if (!totalWeight) return null;
-
-  const matchedMeasureCount = [...usedMeasures].filter((key) => country.measures[key]).length;
-  const coverage = matchedMeasureCount / expectedMeasureKeys.size;
-  if (coverage < 0.4 || matchedMeasureCount < 1) return null;
-
-  return {
-    country,
-    score: areaScores.reduce((sum, area) => sum + area.score * area.weight, 0) / totalWeight,
-    coverage,
-    areas: areaScores.sort((left, right) => right.score - left.score),
-    measureCount: matchedMeasureCount,
-  };
+export function measureDetails(result: MatchResult) {
+  return result.details;
 }
 
-function addContribution(
-  areas: Map<string, Contribution[]>,
-  area: string,
-  contribution: Contribution,
-) {
-  const items = areas.get(area) ?? [];
-  items.push(contribution);
-  areas.set(area, items);
+export function formatValue(value: number) {
+  return new Intl.NumberFormat(undefined, { maximumSignificantDigits: 4 }).format(value);
 }
 
-export function measureDetails(result: MatchResult, answers: Answers) {
-  const targetedMeasures = new Set(questions.flatMap((question) =>
-    question.type === "target"
-      && areaWeightsFromAnswers(answers)[question.area] > 0
-      && chosenTarget(answers[question.id]) !== undefined
-      ? question.measures
-      : [],
-  ));
-  return questions.flatMap((question) => {
-    if (question.type === "priority" && importanceWeight(answers[question.id]) > 0) {
-      return question.measures.flatMap((measure) => {
-        const fact = result.country.measures[measure];
-        const direction = measureDirections[measure];
-        if (!fact || !direction || targetedMeasures.has(measure)) return [];
-        return [{
-          label: measureLabels[measure] ?? measure,
-          unit: measureUnits[measure] ?? "",
-          value: fact.value,
-          year: fact.year,
-          percentile: fact.percentile,
-          score: direction === "high" ? fact.percentile : 100 - fact.percentile,
-          area: question.areaLabel,
-        }];
-      });
-    }
-    if (question.type === "target") {
-      const target = chosenTarget(answers[question.id]);
-      const measure = question.measures[0];
-      const fact = result.country.measures[measure];
-      if (target === undefined || !fact || areaWeightsFromAnswers(answers)[question.area] === 0) return [];
-      return [{
-        label: measureLabels[measure] ?? measure,
-        unit: measureUnits[measure] ?? "",
-        value: fact.value,
-        year: fact.year,
-        percentile: fact.percentile,
-        score: Math.max(0, 100 - Math.abs(fact.percentile - target)),
-        area: question.areaLabel,
-      }];
-    }
-    return [];
-  });
+export function formatMedianValue(value: number, decimalPlaces: number) {
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: decimalPlaces,
+    maximumFractionDigits: decimalPlaces,
+  }).format(value);
 }
 
-export const answerSummary = (answer: Importance | TargetChoice | undefined) => answer ?? "skip";
+export function idealMultiplier(choice: IdealChoice | undefined) {
+  return idealOptions.find((option) => option.value === choice)?.multiplier ?? 0;
+}
+
+export function medianChoiceLabel(choice: MedianChoice | undefined) {
+  return medianOptions.find((option) => option.value === choice)?.label ?? "Skipped";
+}

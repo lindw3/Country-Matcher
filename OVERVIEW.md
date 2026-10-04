@@ -1,68 +1,94 @@
 # Product Overview
 
-Country Matcher is an interactive preference-fit tool. It asks how much several social outcomes matter and, for a few measures, what position the respondent would prefer relative to other countries. It then ranks country profiles against those answers.
-
-The tool is about fit with a person's selected priorities, not a political identity quiz, relocation recommendation, or universal country-quality ranking. Statistical indicators are proxies for complex outcomes and do not describe every resident's experience.
+Country Matcher compares a respondent's preferences for society with country-level indicators. Results are preference-fit comparisons, not a political identity quiz, relocation recommendation, universal country ranking, or prediction of individual happiness. Indicators are proxies and do not capture every resident's experience.
 
 ## Current experience
 
-1. **Introduction** explains the purpose, displays the snapshot date and dataset counts, and starts the questionnaire.
-2. **Questionnaire** presents twelve prompts one at a time. Nine ask how important an area is; three ask for a preferred position on a measure. The respondent can go back, change answers, or skip every question.
-3. **Results** shows the top match, the top three countries, area-fit bars, a fit score, and data coverage. If no usable priorities were answered, the app asks the respondent to review their answers instead of presenting a ranking.
-4. **Country breakdown** shows the observed values, years, peer percentiles, and measure-fit values used for that country.
-5. **Methodology** explains the scoring concept and its limitations.
+1. **Introduction** describes the purpose and starts the questionnaire once country data is available.
+2. **Questionnaire** has three sections: allocate ten points across shared foundations, describe an ideal society through agreement choices, and select value ranges relative to six measure medians. The respondent can go back, skip the point allocation, choose “It doesn't matter” for an ideal statement, or skip each median item.
+3. **Results** shows the closest country, a top-three shortlist, score-group bars, fit score, and weighted data coverage. Life satisfaction always contributes to the general score, including when other preferences are skipped.
+4. **Country breakdown** lists the measures used for the country's score, with observed value, unit, year, peer percentile, and fit contribution.
+5. **Methodology** summarizes scoring and data caveats.
 
-The app currently uses in-page state rather than separate URL routes. Answers persist in browser local storage and are not sent to a service.
+The app uses in-page state rather than URL routes. Answers are saved in this browser's local storage under a versioned key; there is no account or server-side answer submission.
 
 ## Questionnaire
 
-The importance questions cover democracy and institutions, equality and opportunity, safety, health and wellbeing, prosperity and work, environment and energy, community and belonging, public services, and work-life balance. Each has three importance levels:
+### 1. Allocate ten points
 
-| Answer | Area weight |
-| --- | ---: |
-| Essential | 3 |
-| Important | 2 |
-| Somewhat | 1 |
-| Skip this question | 0; excluded |
+The respondent assigns exactly ten integer points across these nine groups. All ten points may go to one group. The whole section can instead be skipped.
 
-The three target questions ask about the share of residents born in another country, the share identifying with a religion, and annual working hours per worker. Their choices correspond to target peer percentiles of 10, 30, 50, 70, and 90. A skipped target is omitted. A target only contributes when its area was given a non-zero importance weight.
-
-## What affects a score
-
-The report currently scores a curated subset of the source measures:
-
-| Area | Measures | Current scoring direction |
+| Group | Measures | Direction scored positively |
 | --- | --- | --- |
-| Democracy & institutions | Electoral democracy (`demokratiindex`); political corruption (`korruption_index`) | Higher democracy and lower corruption-index values score higher. |
-| Equality & opportunity | Gini (`gini`); gender wage gap (`lönegap`); women's work participation relative to men's (`andel_kvinnor_arbete`) | Lower Gini and wage-gap values, and higher participation ratios, score higher. |
-| Safety | Homicide rate (`mord_percapita`) | Lower values score higher. |
-| Health & wellbeing | Life expectancy (`livslängd`); life satisfaction (`livstillfredsställelse`); suicide rate (`suicid/100k`) | Higher life expectancy and life satisfaction, and lower suicide rates, score higher. |
-| Prosperity & work | GDP per person (`gdp_per_capita`); unemployment (`unemployment_rate`) | Higher GDP per person and lower unemployment score higher. |
-| Environment & energy | CO2 per person (`co2_percapita`); PM2.5 exposure (`pm25_exposure`); renewable energy share (`renewable_energy_share`) | Lower emissions and exposure, and a higher renewable share, score higher. |
-| Community & belonging | Self-reported trust (`share_trust`); migration-stock share (`migrant_population_share`); religious-identification share (`share_religious`) | Trust scores higher at higher percentiles. Migration and religion use the respondent's target percentile. |
-| Public services | Average schooling (`skolår`); education spending (`utbildning_andel_gdp`); public health spending (`sjukvård_andel_gdp`) | Higher values score higher. Spending is an input measure, not a direct measure of service quality. |
-| Work & daily life | Annual working hours (`annual_working_hours`) | Lower hours are the default direction; if the respondent answers the hours target question, the selected target replaces this default. |
+| Reliable, abundant energy | `electricity_generation_per_capita`, `energi_percapita` | Higher values |
+| Democratic institutions and low corruption | `demokratiindex`, `korruption_index` | Higher democracy; lower corruption-index value |
+| Equality and gender opportunity | `lönegap`, `andel_kvinnor_arbete`, `gini` | Lower wage gap and Gini; higher women's-to-men's work participation ratio |
+| Social trust | `share_trust` | Higher values |
+| Education | `skolår`, `utbildning_andel_gdp` | Higher values |
+| Public healthcare investment | `sjukvård_andel_gdp` | Higher values |
+| Prosperity and employment | `gdp_per_capita`, `unemployment_rate` | Higher GDP per person; lower unemployment |
+| Lower carbon emissions | `co2_percapita` | Lower values |
+| Personal safety | `mord_percapita` | Lower values |
 
-All 40 measures returned by `load_data.py` are included in the generated country snapshot, but the following are not currently used to calculate report scores: `fetma_andel`, `hdi`, `energi_percapita`, `bistånd_andel_bni`, `skatt_andel_bnp`, `statligautgifter_andel_bnp`, `handel_andel_gdp`, `barn_per_kvinna`, `död_i_konflikt_percapita`, `women_married_union_share`, `generative_ai_adult_share`, `military_spending_gdp`, `armed_forces_labor_share`, `nuclear_energy_share`, `electricity_generation_per_capita`, `tobacco_use_adult_share`, `alcohol_consumption_per_capita`, `urban_population_share`, and `conflict_deaths`.
+Each group's measure fit is averaged over the values available for a country. Its allocated points set the group's weight in the overall score.
 
-These remain available for future analysis. In particular, `conflict_deaths` is an absolute count from the local conflict file, not a per-capita rate, so it is not interchangeable with the separate OWID conflict measure.
+### 2. “My ideal society is characterized by…”
 
-## Scoring and coverage
+The respondent chooses one of five responses for each statement: “It doesn't matter”, “I don't agree at all”, “I somewhat disagree”, “I somewhat agree”, or “I agree fully”. Statements left unanswered have no effect.
 
-For each direction-based measure, the data preparation step assigns each country a percentile among the countries with a value for that measure. Higher-is-better measures use that percentile as their fit score; lower-is-better measures use its inverse (`100 - percentile`).
+| Statement | Measures | Agreement favors |
+| --- | --- | --- |
+| A healthy lifestyle is common. | `tobacco_use_adult_share`, `alcohol_consumption_per_capita`, `fetma_andel` | Lower values |
+| Traditional family values have an important place in society. | `women_married_union_share`, `barn_per_kvinna` | Higher values |
+| A large share of people live in urban areas. | `urban_population_share` | Higher values |
+| Religion has a visible place in society. | `share_religious` | Higher values |
+| People have shorter working hours and more time outside work. | `annual_working_hours` | Lower values |
+| A substantial share of residents were born in another country. | `migrant_population_share` | Higher values |
+| AI plays an important role in people's daily lives. | `generative_ai_adult_share` | Higher values |
 
-For a target answer, the fit score is `max(0, 100 - abs(country percentile - target percentile))`. Thus, a country nearer the chosen position scores higher for that measure.
+The response multipliers are 0 for “It doesn't matter”, -2 for “I don't agree at all”, -1 for “I somewhat disagree”, +1 for “I somewhat agree”, and +2 for “I agree fully”. A positive answer uses the agreement direction; a negative answer reverses it. The absolute multiplier is the group's weight.
 
-Within an area, the app averages the available measure-fit scores. It then combines available area scores using the selected importance weights. Missing measures are omitted and the remaining area weights are renormalized for that country. Coverage is the share of distinct active measures for which that country has data. A country needs at least one scored measure and at least 40% coverage to appear in the results. The app sorts eligible countries by score and shows the top three.
+### 3. Median-relative rates
 
-Scores and percentiles are rounded for display. Country observations can come from different years; both year and coverage are shown so a high score is not mistaken for complete or same-year evidence.
+For each measure, the questionnaire calculates the median across countries with a value in the generated snapshot. It displays the median and five absolute value bands with units. For a positive median, band boundaries are:
 
-## Data and limitations
+| Choice | Value band |
+| --- | --- |
+| Much lower | Below 50% of the median |
+| Slightly lower | 50% to 75% of the median |
+| Around the median | 75% to 125% of the median |
+| Slightly higher | 125% to 150% of the median |
+| Much higher | Above 150% of the median |
 
-Most series come from OWID Grapher CSVs. Electoral democracy, energy use, Gini, and deaths in conflicts also use local files in `data/`. The marriage/union series deliberately uses the observed estimate column, not the projected series. The generative-AI source has date-level rows and is reduced to its latest observation within each country-year.
+Each rate is introduced in a plain-language sentence that includes its median, followed by “How much do you think is appropriate?” Foreign aid (`bistånd_andel_bni`) is displayed to two decimal places. Tax revenue (`skatt_andel_bnp`), government spending (`statligautgifter_andel_bnp`), military spending (`military_spending_gdp`), renewable energy share (`renewable_energy_share`), and nuclear energy share (`nuclear_energy_share`) are displayed as whole percentages. Scoring uses unrounded medians and boundaries. Any item can be skipped.
 
-The snapshot chooses the latest non-missing observation separately for each country and measure. It does not select one shared year for all countries, apply a maximum age for values, or choose a year based on a coverage-versus-recency threshold. Old observations can therefore remain in the comparison; inspect the displayed year before interpreting a match.
+If the median is zero or below, relative percentages cannot define useful ranges. The app uses percentile cutoffs across distinct observed values instead, which avoids impossible negative ranges and reduces duplicate boundaries where the data varies. The true median remains visible and the interface identifies this fallback.
 
-Country names are canonicalized through `pycountry` with a small alias map. The resulting profiles include ISO-recognized territories and other entries as well as sovereign states; the current snapshot is not a sovereign-states-only list. Some source entities will not match the country-name lookup and are omitted.
+## General score and match calculation
 
-Scoring directions and proxies are initial product assumptions. Examples include treating public spending as beneficial, treating fewer work hours as preferable unless a target is supplied, and using homicide rates as one safety proxy. Review these assumptions and the source definitions before treating results as policy conclusions.
+Life satisfaction (`livstillfredsställelse`) always contributes to a fixed-weight General score; higher country percentiles score higher. Its fixed weight is 1, separate from the respondent's ten priority points.
+
+Direction-based measures use their percentile among countries with data. A higher-is-better value scores at its percentile; a lower-is-better value scores at `100 - percentile`. Point groups average their available measure scores and use the points assigned as their weight. Ideal statements use the direction and signed-strength rules above. Each answered median preference has weight one. Values inside the selected band score 100; scores decline linearly outside it and reach zero one adjacent-band width beyond the nearest boundary.
+
+All active groups are combined as a weighted average. If some measures in a group are missing, that group's effective weight is reduced in proportion to the available measures. Coverage is the share of expected weighted data available for that country. A country needs at least 40% coverage and some available score weight to appear. Results are ordered by score, with coverage as a tie-breaker; the report displays the top three.
+
+## Measures not currently used
+
+The data snapshot contains all 40 measures loaded by `scripts/load_data.py`. These eight do not currently affect a questionnaire response or score:
+
+- `livslängd`
+- `suicid/100k`
+- `hdi`
+- `handel_andel_gdp`
+- `död_i_konflikt_percapita`
+- `armed_forces_labor_share`
+- `pm25_exposure`
+- `conflict_deaths`
+
+The OWID conflict deaths measure and the local `conflict_deaths` series are both unused. The local series is an absolute count, not a per-capita rate.
+
+## Data limitations
+
+Most measures come from OWID Grapher CSVs; local files provide other series. Each country uses its latest non-missing observation for each measure, so a report can combine different years and can include old observations. The marriage/union source uses observed estimates rather than projections. Country names are normalized through `pycountry` and a small alias map; recognized territories may appear alongside sovereign states, while unresolved source entities are omitted.
+
+The score directions are product assumptions. For example, the model currently treats higher energy use/generation and public spending as positive, fewer working hours as agreement with the time-outside-work statement, and greater marriage prevalence/fertility as agreement with the traditional-family statement. These measures do not fully describe the broad social concepts in their question text. Review source definitions and these assumptions before using results as policy conclusions.
