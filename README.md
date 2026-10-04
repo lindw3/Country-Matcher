@@ -23,6 +23,12 @@ Create a production build with:
 npm run build
 ```
 
+## GitHub Pages
+
+The `Deploy to GitHub Pages` workflow publishes the site when changes are pushed to `main`. It installs the Python and Node dependencies, regenerates `public/data/countries.json`, builds the Vite site with the `/Country-Matcher/` base path, and deploys the `dist/` artifact. The app's data request uses Vite's base URL, so it resolves correctly on project Pages.
+
+In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The first deployment requires that setting and the workflow permissions for Pages deployment, which the workflow declares.
+
 ## Project map
 
 - `src/App.tsx` contains the app screens and interactions.

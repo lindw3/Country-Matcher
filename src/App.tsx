@@ -27,7 +27,7 @@ function App() {
   const returnScreen = useRef<Screen>("intro");
 
   useEffect(() => {
-    fetch("/data/countries.json")
+    fetch(`${import.meta.env.BASE_URL}data/countries.json`)
       .then((response) => {
         if (!response.ok) throw new Error("Country data could not be loaded.");
         return response.json() as Promise<CountryDataset>;
