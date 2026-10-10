@@ -5,7 +5,7 @@ Country Matcher compares a respondent's preferences for society with country-lev
 ## Current experience
 
 1. **Introduction** describes the purpose and starts the questionnaire once country data is available.
-2. **Questionnaire** has three sections: allocate ten points across shared foundations, describe an ideal society through agreement choices, and select value ranges relative to six measure medians. The respondent can go back, skip the point allocation, choose “It doesn't matter” for an ideal statement, or skip each median item.
+2. **Questionnaire** has three sections: allocate twelve points across shared foundations, describe an ideal society through agreement choices, and select value ranges relative to six measure medians. The respondent can go back, skip the point allocation, choose “It doesn't matter” for an ideal statement, or skip each median item.
 3. **Results** shows the closest country, a top-three shortlist, score-group bars, fit score, and weighted data coverage. Life satisfaction always contributes to the general score, including when other preferences are skipped.
 4. **Country breakdown** lists the measures used for the country's score, with observed value, unit, year, peer percentile, and fit contribution.
 5. **Methodology** summarizes scoring and data caveats.
@@ -14,9 +14,9 @@ The app uses in-page state rather than URL routes. Answers are saved in this bro
 
 ## Questionnaire
 
-### 1. Allocate ten points
+### 1. Allocate twelve points
 
-The respondent assigns exactly ten integer points across these nine groups. All ten points may go to one group. The whole section can instead be skipped.
+The respondent assigns exactly twelve integer points across these nine groups. All twelve points may go to one group. The whole section can instead be skipped.
 
 | Group | Measures | Direction scored positively |
 | --- | --- | --- |
@@ -66,9 +66,9 @@ If the median is zero or below, relative percentages cannot define useful ranges
 
 ## General score and match calculation
 
-Life satisfaction (`livstillfredsställelse`) always contributes to a fixed-weight General score; higher country percentiles score higher. Its fixed weight is 1, separate from the respondent's ten priority points.
+Life satisfaction (`livstillfredsställelse`) always contributes to a fixed-weight General score; higher country percentiles score higher. Its fixed weight is 1, separate from the respondent's twelve priority points.
 
-Direction-based measures use their percentile among countries with data. A higher-is-better value scores at its percentile; a lower-is-better value scores at `100 - percentile`. Point groups average their available measure scores and use the points assigned as their weight. Ideal statements use the direction and signed-strength rules above. Each answered median preference has weight one. Values inside the selected band score 100; scores decline linearly outside it and reach zero one adjacent-band width beyond the nearest boundary.
+Direction-based measures use their percentile among countries with data. A higher-is-better value scores at its percentile; a lower-is-better value scores at `100 - percentile`. Point groups average their available measure scores and use the points assigned as their weight. Ideal statements use the direction and signed-strength rules above. Each answered median preference has weight one. Median matching compares the country's band category to the chosen category: same band scores 100, one step away 75, two steps away is neutral at 50, three steps away 25, and four steps away 0. Each band step changes fit by 25 points relative to neutral.
 
 All active groups are combined as a weighted average. If some measures in a group are missing, that group's effective weight is reduced in proportion to the available measures. Coverage is the share of expected weighted data available for that country. A country needs at least 40% coverage and some available score weight to appear. Results are ordered by score, with coverage as a tie-breaker; the report displays the top three.
 

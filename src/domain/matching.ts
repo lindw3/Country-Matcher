@@ -82,14 +82,14 @@ type MedianBand = {
   value: Exclude<MedianChoice, "skip">;
   lower: number | null;
   upper: number | null;
-  lowerDecay: number;
-  upperDecay: number;
+  index: number;
 };
 
 type MeasurePreference = {
   key: string;
   direction: Direction;
   band?: MedianBand;
+  bandBoundaries?: number[];
 };
 
 type ScoreGroup = {
@@ -143,14 +143,12 @@ export function getMedianBands(dataset: CountryDataset, measure: string): {
     const formatted = formatMedianValue(value, question?.displayDecimals ?? 0);
     return `${formatted}${units.startsWith("%") ? "" : " "}${units}`;
   };
-  const rangeWidths = boundaries.slice(1).map((value, index) => Math.max(value - boundaries[index], 1e-9));
-
   const definitions: DisplayMedianBand[] = [
-    { value: "much-lower", label: `Below ${valuesText(boundaries[0])}`, lower: null, upper: boundaries[0], lowerDecay: 1e-9, upperDecay: rangeWidths[0] },
-    { value: "slightly-lower", label: `From ${valuesText(boundaries[0])} to ${valuesText(boundaries[1])}`, lower: boundaries[0], upper: boundaries[1], lowerDecay: rangeWidths[0], upperDecay: rangeWidths[1] },
-    { value: "near-median", label: `From ${valuesText(boundaries[1])} to ${valuesText(boundaries[2])}`, lower: boundaries[1], upper: boundaries[2], lowerDecay: rangeWidths[0], upperDecay: rangeWidths[2] },
-    { value: "slightly-higher", label: `From ${valuesText(boundaries[2])} to ${valuesText(boundaries[3])}`, lower: boundaries[2], upper: boundaries[3], lowerDecay: rangeWidths[1], upperDecay: rangeWidths[2] },
-    { value: "much-higher", label: `Above ${valuesText(boundaries[3])}`, lower: boundaries[3], upper: null, lowerDecay: rangeWidths[2], upperDecay: 1e-9 },
+    { value: "much-lower", label: `Below ${valuesText(boundaries[0])}`, lower: null, upper: boundaries[0], index: 0 },
+    { value: "slightly-lower", label: `From ${valuesText(boundaries[0])} to ${valuesText(boundaries[1])}`, lower: boundaries[0], upper: boundaries[1], index: 1 },
+    { value: "near-median", label: `From ${valuesText(boundaries[1])} to ${valuesText(boundaries[2])}`, lower: boundaries[1], upper: boundaries[2], index: 2 },
+    { value: "slightly-higher", label: `From ${valuesText(boundaries[2])} to ${valuesText(boundaries[3])}`, lower: boundaries[2], upper: boundaries[3], index: 3 },
+    { value: "much-higher", label: `Above ${valuesText(boundaries[3])}`, lower: boundaries[3], upper: null, index: 4 },
   ];
 
   return {
@@ -161,19 +159,13 @@ export function getMedianBands(dataset: CountryDataset, measure: string): {
   };
 }
 
-function medianPreferenceScore(value: number, band: MedianBand) {
-  const insideLower = band.lower === null || value >= band.lower;
-  const insideUpper = band.upper === null || value <= band.upper;
-  if (insideLower && insideUpper) return 100;
-
-  const below = band.lower !== null && value < band.lower;
-  const distance = below
-    ? band.lower! - value
-    : band.upper !== null && value > band.upper
-      ? value - band.upper
-      : 0;
-  const decayDistance = Math.max(below ? band.lowerDecay : band.upperDecay, 1e-9);
-  return Math.max(0, 100 - (distance / decayDistance) * 100);
+function medianPreferenceScore(value: number, preference: MeasurePreference) {
+  const band = preference.band!;
+  const boundaries = preference.bandBoundaries!;
+  const countryBandIndex = boundaries.findIndex((boundary) => value < boundary);
+  const actualIndex = countryBandIndex === -1 ? boundaries.length : countryBandIndex;
+  const stepsAway = Math.abs(actualIndex - band.index);
+  return Math.max(0, 100 - stepsAway * 25);
 }
 
 function makeScoreGroups(dataset: CountryDataset, answers: Answers): ScoreGroup[] {
@@ -221,7 +213,12 @@ function makeScoreGroups(dataset: CountryDataset, answers: Answers): ScoreGroup[
       key: `median-${question.id}`,
       label: question.label,
       weight: 1,
-      measures: [{ key: question.measure, direction: "high", band }],
+      measures: [{
+        key: question.measure,
+        direction: "high",
+        band,
+        bandBoundaries: bands.bands.slice(0, -1).map((item) => item.upper!),
+      }],
     });
   }
 
@@ -229,7 +226,7 @@ function makeScoreGroups(dataset: CountryDataset, answers: Answers): ScoreGroup[
 }
 
 function scoreMeasure(fact: CountryMeasure, preference: MeasurePreference) {
-  if (preference.band) return medianPreferenceScore(fact.value, preference.band);
+  if (preference.band) return medianPreferenceScore(fact.value, preference);
   return preference.direction === "high" ? fact.percentile : 100 - fact.percentile;
 }
 

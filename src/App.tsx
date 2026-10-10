@@ -144,13 +144,13 @@ function Intro({ dataset, onStart, ready }: { dataset: CountryDataset | null; on
         <p className="intro-description">Take a stance on what your ideal country looks like. We’ll compare it with measured outcomes across countries and show which country is your best fit.</p>
         <div className="intro-actions">
           <button className="primary-button" onClick={onStart} disabled={!ready || !dataset}>Start the questions <ArrowRight size={17} /></button>
-          <span className="time-note">Three sections <span>·</span> Skip any preference</span>
+          <span className="time-note">Takes approximately 5 minutes</span>
         </div>
         <div className="intro-footnote"><Check size={15} /> Your answers stay in this browser.</div>
       </div>
       <div className="intro-aside" aria-label="Project summary">
         <div className="aside-index"><span>THE IDEA</span></div>
-        <p>There is no perfect country. Some may align more closely with your values and priorities.</p>
+        <p>There is no perfect country. But some may align more closely with your values and priorities.</p>
         <div className="aside-divider" />
         <div className="stat-row"><span className="stat-number">{dataset?.countryCount ?? "—"}</span><span>countries compared</span></div>
         <div className="stat-row"><span>using</span><span className="stat-number">{dataset?.measureCount ?? "—"}</span><span>different measures</span></div>
@@ -174,7 +174,7 @@ function Questionnaire({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const sectionNames = ["Allocate 10 points", "Ideal society", "Relative to the median"];
+  const sectionNames = ["Allocate 12 points", "Ideal society", "Relative to the median"];
   const pointsUsed = Object.values(answers.points).reduce((total, points) => total + points, 0);
   const pointsLeft = TOTAL_PRIORITY_POINTS - pointsUsed;
   const progress = ((sectionIndex + 1) / sectionNames.length) * 100;
@@ -199,17 +199,17 @@ function Questionnaire({
         <aside className="question-aside">
           <p className="aside-index">HOW IT WORKS</p>
           <p>{sectionIndex === 0
-            ? "Each group is scored from the average of its available measures, then weighted by the points you assign. Life satisfaction always contributes separately to the general score."
+            ? "Each group is scored from the average of its available measures, then weighted by the points you assign."
             : sectionIndex === 1
-              ? "Agreement uses a multiplier of +1 or +2. Disagreement uses -1 or -2, reversing the preferred direction. Neutral statements have no effect."
-              : "The middle band is within 25% of the median. Slightly lower or higher bands are 26-50% away; much lower or higher bands are more than 50% away. Displayed ranges are rounded, but scoring uses exact values."}</p>
+              ? "Agreement adds a positive multiplier. Disagreement adds a negative multiplier, reversing the preferred direction. Neutral statements have no effect."
+              : "A match in your chosen band scores highest. One band away remains positive, two bands away is neutral, and three or four bands away score increasingly negatively."}</p>
         </aside>
         <div className="question-main">
           {sectionIndex === 0 && (
             <>
               <div className="question-meta"><span className="question-number">01</span><span>Shared foundations</span></div>
               <h1>What should matter most in a society?</h1>
-              <p className="question-detail">Allocate exactly 10 points across these areas. Every point increases that area's influence; you can place all 10 on one area.</p>
+              <p className="question-detail">Allocate 12 points across these areas. Every point increases that area's influence; you can place all 12 on one area.</p>
               <div className="allocation-summary"><b>{answers.pointsSkipped ? "Point allocation skipped" : `${pointsUsed} / ${TOTAL_PRIORITY_POINTS} points allocated`}</b><span>{answers.pointsSkipped ? "The general score still applies." : `${pointsLeft} ${pointsLeft === 1 ? "point" : "points"} left to place`}</span></div>
               <div className={`allocation-list ${answers.pointsSkipped ? "is-disabled" : ""}`}>
                 {pointGroups.map((group) => {
@@ -241,7 +241,7 @@ function Questionnaire({
                     <fieldset className="ideal-choices">
                       <legend className="visually-hidden">{statement.statement}</legend>
                       {idealOptions.map((option) => (
-                        <label className="ideal-choice" key={option.value}>
+                        <label className="ideal-choice" data-answer={option.value} key={option.value}>
                           <input
                             type="radio"
                             name={statement.id}
@@ -262,8 +262,8 @@ function Questionnaire({
           {sectionIndex === 2 && (
             <>
               <div className="question-meta"><span className="question-number">03</span><span>Policy preferences</span></div>
-              <h1>How should these rates compare with the median?</h1>
-              <p className="question-detail">Options show absolute value ranges calculated from the median of countries with data. A range is a preferred band, not a precise point target. You may skip any item.</p>
+              <h1>How should your ideal country compare to the median?</h1>
+              <p className="question-detail">Options show absolute value ranges calculated from the median of countries with data. You may skip any item.</p>
               <div className="median-list">
                 {medianQuestions.map((question) => {
                   const reference = dataset ? getMedianBands(dataset, question.measure) : null;
@@ -309,7 +309,7 @@ function Questionnaire({
           </div>
         </div>
       </div>
-      <div className="quiz-footerline"><span>YOUR ANSWERS STAY IN THIS BROWSER</span><span>{sectionNames.length - sectionIndex - 1} SECTIONS LEFT</span></div>
+      <div className="quiz-footerline"><span>{sectionNames.length - sectionIndex - 1} SECTIONS LEFT</span></div>
     </section>
   );
 }
@@ -386,7 +386,7 @@ function Report({
           <button className="detail-link" onClick={() => onSelectCountry(leader)}>Explore the score breakdown <ArrowRight size={15} /></button>
         </section>
       </div>
-      <div className="report-caveat"><span className="caveat-mark">i</span><p>This is a preference-fit score, not a quality-of-life verdict. Countries with missing data may have lower coverage, and each measure may come from a different year.</p></div>
+      <div className="report-caveat"><span className="caveat-mark">i</span><p>Countries with missing data may have lower coverage, which affects the matching process.</p></div>
     </section>
   );
 }
@@ -417,7 +417,7 @@ function CountryDetail({ result, onBack }: { result: MatchResult; onBack: () => 
           </tbody>
         </table>
       </div>
-      <p className="detail-note">Peer position is a percentile among countries with data for that measure. Target-range fit is calculated from the observed value's distance from your selected absolute band.</p>
+      <p className="detail-note">Peer position is a percentile among countries with data. Median-question fit is based on the number of value bands between the country's band and your selected band.</p>
     </section>
   );
 }
@@ -425,19 +425,18 @@ function CountryDetail({ result, onBack }: { result: MatchResult; onBack: () => 
 function Methodology({ onBack }: { onBack: () => void }) {
   return (
     <section className="methodology-view">
-      <button className="back-link" onClick={onBack}><ArrowLeft size={16} /> Back to the site</button>
+      <button className="back-link" onClick={onBack}><ArrowLeft size={16} /> Back</button>
       <p className="eyebrow"><span className="eyebrow-rule" /> HOW THE MATCH WORKS</p>
-      <h1>Preferences in.<br /><em>Evidence alongside.</em></h1>
+      <h1>State your preferences.<br /><em>Match it with the data.</em></h1>
       <div className="method-grid">
-        <article><span>01</span><h2>General score</h2><p>Life satisfaction always contributes to every country score, with higher values scoring higher. It has a fixed weight alongside the preferences you choose.</p></article>
-        <article><span>02</span><h2>Ten priority points</h2><p>Points are distributed across nine shared-foundation areas. Each area averages its available measures, and the points weight that area's score.</p></article>
+        <article><span>01</span><h2>General score</h2><p>Life satisfaction is considered a "common good", and therefore always contributes to every country score, with higher values scoring higher. It has a fixed weight alongside the preferences you choose.</p></article>
+        <article><span>02</span><h2>Twelve priority points</h2><p>Points are distributed across nine shared-foundation areas. Each area averages its available measures, and the points weight that area's score.</p></article>
         <article><span>03</span><h2>Ideal society</h2><p>Agreement gives a positive multiplier of 1 or 2; disagreement gives a negative multiplier of 1 or 2 and reverses the preference direction. “It doesn't matter” excludes the statement.</p></article>
-        <article><span>04</span><h2>Median ranges</h2><p>The middle band is within 25% of the median, slightly bands are 26-50% away, and much bands are more than 50% away. Displayed values are rounded; scoring uses exact boundaries.</p></article>
+        <article><span>04</span><h2>Median ranges</h2><p>Displayed ranges use the median thresholds and are rounded for readability. Matching compares the country's range category with yours: same band scores 100, one step away 75, two steps away is neutral at 50, three steps away 25, and four steps away 0.</p></article>
         <article><span>05</span><h2>Country data</h2><p>Most indicators are sourced from <a href="https://ourworldindata.org/" target="_blank" rel="noreferrer">Our World in Data</a>. Each country uses its latest available observation per measure, so years can differ.</p></article>
-        <article><span>06</span><h2>Read with care</h2><p>Indicators are imperfect proxies and include value judgments. Missing measures lower data coverage; scores are preference-fit comparisons, not universal country rankings.</p></article>
+        <article><span>06</span><h2>Interpret with care</h2><p>Indicators are imperfect proxies and include value judgments. The chosen indicators are largely based on what data is available across countries - not what is necessarily most important. Many countries have missing data which affects the ability to find a good match.</p></article>
       </div>
-      <div className="method-warning"><b>Zero-median rates</b><p>When a measure's median is zero or below, relative percentages cannot define meaningful ranges. In that case the options use percentile cutoffs from the distinct observed values, avoiding negative or repeated bands where possible, and the questionnaire identifies this fallback.</p></div>
-      <button className="text-action method-back" onClick={onBack}>Return to the comparison <ArrowRight size={15} /></button>
+      <button className="text-action method-back" onClick={onBack}>Return to the test <ArrowRight size={15} /></button>
     </section>
   );
 }

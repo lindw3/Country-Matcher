@@ -29,9 +29,9 @@ The first screen describes the task, displays country and measure counts, offers
 
 The questionnaire has three sections with a `current / total` indicator, progress bar, back action, and continue action. Previous responses remain selected when navigating back.
 
-The first section lists nine shared-foundation groups with minus/plus steppers. The respondent allocates ten points total, including the option to put all points in one group. Continue stays disabled until ten points are assigned; a separate action skips this section.
+The first section lists nine shared-foundation groups with minus/plus steppers. The respondent allocates twelve points total, including the option to put all points in one group. Continue stays disabled until twelve points are assigned; a separate action skips this section.
 
-The second section lists seven “My ideal society is characterized by…” statements. Each statement has five visible radio choices arranged horizontally beside it: “It doesn't matter”, “I don't agree at all”, “I somewhat disagree”, “I somewhat agree”, and “I agree fully”. Statement rows do not include measure-description subtitles.
+The second section lists seven “My ideal society is characterized by…” statements. Each statement has five visible radio choices arranged horizontally beside it: “It doesn't matter”, “I don't agree at all”, “I somewhat disagree”, “I somewhat agree”, and “I agree fully”. “It doesn't matter” is separated with a divider and muted gray styling. Disagreement choices progress from red to lighter red; agreement choices progress from lighter green to green. Statement rows do not include measure-description subtitles.
 
 The third section lists six measures. Each starts with a sentence that states the median in plain language, followed by “How much do you think is appropriate?” Five absolute ranges and a skip action follow. Foreign-aid values show two decimal places; the other rates show whole percentages. If the median is zero or below, the interface explains that ranges use percentile cutoffs across distinct observed values instead.
 

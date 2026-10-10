@@ -32,20 +32,20 @@ Country Matcher/
 ## Browser screens
 
 - **Introduction** describes the comparison, displays dataset counts, and starts the questionnaire when country data has loaded.
-- **Questionnaire** has three sections: allocate ten points, set ideal-society statement preferences, and choose median-relative ranges. It supports back/continue navigation and skipped preferences.
+- **Questionnaire** has three sections: allocate twelve points, set ideal-society statement preferences, and choose median-relative ranges. It supports back/continue navigation and skipped preferences.
 - **Results** shows the top match, the top-three shortlist, score-group bars, and weighted coverage.
 - **Country breakdown** shows every active measure contribution with raw value and unit, observation year, peer percentile, and fit score.
 - **Methodology** summarizes the scoring rules and limitations and returns to the previous app screen.
 
 ## Questionnaire and scoring
 
-`src/domain/questions.ts` defines nine point groups. The respondent allocates exactly ten integer points across them or skips the allocation. The file also defines seven ideal-society statements, each offering “It doesn't matter”, full or partial disagreement, and partial or full agreement; and six median questions. Median questions can be skipped individually.
+`src/domain/questions.ts` defines nine point groups. The respondent allocates exactly twelve integer points across them or skips the allocation. The file also defines seven ideal-society statements, each offering “It doesn't matter”, full or partial disagreement, and partial or full agreement; and six median questions. Median questions can be skipped individually.
 
 Ideal response multipliers are 0, -2, -1, +1, and +2. Positive values use the direction associated with agreeing with the statement, negative values reverse that direction, and the absolute value determines the statement's weight. “It doesn't matter” contributes no group.
 
 `src/domain/matching.ts` always adds life satisfaction (`livstillfredsställelse`) as a higher-is-better General score with fixed weight 1. Each allocated point group averages the scores of its available measures and uses its point count as a weight. Ideal-statement groups score their configured measures in the agreement direction or its inverse, weighted by multiplier magnitude.
 
-For each median question, the browser calculates the median of the latest country values present in `countries.json` and embeds it in a plain-language sentence. For a positive median, the five bands are below 50%, 50-75%, 75-125%, 125-150%, and above 150% of the median. The UI displays boundaries as absolute values with units. Foreign aid is displayed to two decimal places; other rates are rounded to whole percentages. Scoring uses unrounded boundaries. A value in the selected band scores 100; outside it, the score decreases linearly with distance and reaches zero one adjacent-band width beyond the nearest edge. If the median is zero or below, cutoffs use percentiles over distinct observed values instead, avoiding invalid negative ranges and reducing repeated cutoffs; the true median remains visible and the UI explains the fallback.
+For each median question, the browser calculates the median of the latest country values present in `countries.json` and embeds it in a plain-language sentence. For a positive median, the five bands are below 50%, 50-75%, 75-125%, 125-150%, and above 150% of the median. The UI displays boundaries as absolute values with units. Foreign aid is displayed to two decimal places; other rates are rounded to whole percentages. A country's category is determined from the unrounded boundaries. Matching is ordinal: same category scores 100, one step away 75, two steps away 50 (neutral), three steps away 25, and four steps away 0, changing by 25 points per step from the neutral midpoint. If the median is zero or below, cutoffs use percentiles over distinct observed values instead, avoiding invalid negative ranges and reducing repeated cutoffs; the true median remains visible and the UI explains the fallback.
 
 All active score groups are combined as a weighted average. Each answered median preference has weight one. When only part of a group's measures is available for a country, both its effective score weight and its contribution to coverage are scaled by the available fraction. A country requires at least 40% weighted coverage and some available score weight. Results are ordered by score and then coverage; twenty candidates are computed and the report displays the first three.
 

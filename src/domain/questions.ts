@@ -8,7 +8,7 @@ export type Answers = {
   medians: Record<string, MedianChoice>;
 };
 
-export const TOTAL_PRIORITY_POINTS = 10;
+export const TOTAL_PRIORITY_POINTS = 12;
 
 export type PointGroup = {
   id: string;
@@ -62,7 +62,7 @@ export const pointGroups: PointGroup[] = [
   },
   {
     id: "prosperity",
-    label: "Prosperity and employment",
+    label: "Prosperity and high employment",
     measures: [
       { key: "gdp_per_capita", direction: "high" },
       { key: "unemployment_rate", direction: "low" },
@@ -97,7 +97,7 @@ export type IdealStatement = {
 export const idealStatements: IdealStatement[] = [
   {
     id: "healthy-lifestyle",
-    statement: "A healthy lifestyle is common.",
+    statement: "A population that values a healthy lifestyle.",
     measures: [
       { key: "tobacco_use_adult_share", agreeDirection: "low" },
       { key: "alcohol_consumption_per_capita", agreeDirection: "low" },
@@ -114,22 +114,22 @@ export const idealStatements: IdealStatement[] = [
   },
   {
     id: "urban-life",
-    statement: "A large share of people live in urban areas.",
+    statement: "A largely urban society.",
     measures: [{ key: "urban_population_share", agreeDirection: "high" }],
   },
   {
     id: "religion",
-    statement: "Religion has a visible place in society.",
+    statement: "A religious population.",
     measures: [{ key: "share_religious", agreeDirection: "high" }],
   },
   {
     id: "work-hours",
-    statement: "People have shorter working hours and more time outside work.",
+    statement: "People spend less time working.",
     measures: [{ key: "annual_working_hours", agreeDirection: "low" }],
   },
   {
     id: "migration",
-    statement: "A substantial share of residents were born in another country.",
+    statement: "A society with generous immigration policies.",
     measures: [{ key: "migrant_population_share", agreeDirection: "high" }],
   },
   {
@@ -154,7 +154,7 @@ export const medianQuestions: MedianQuestion[] = [
   { id: "government-spending", label: "Government spending", medianSentence: "The median country spends about {value} percent of its GDP through government expenditure.", measure: "statligautgifter_andel_bnp", unit: "% of GDP", displayDecimals: 0 },
   { id: "military", label: "Military spending", medianSentence: "The median country spends about {value} percent of its GDP on the military.", measure: "military_spending_gdp", unit: "% of GDP", displayDecimals: 0 },
   { id: "renewable-energy", label: "Renewable energy", medianSentence: "The median country gets about {value} percent of its primary energy from renewable sources.", measure: "renewable_energy_share", unit: "% of primary energy", displayDecimals: 0 },
-  { id: "nuclear-energy", label: "Nuclear energy", medianSentence: "The median country gets about {value} percent of its primary energy from nuclear power.", measure: "nuclear_energy_share", unit: "% of primary energy", displayDecimals: 0 },
+  { id: "nuclear-energy", label: "Nuclear energy", medianSentence: "The median country gets {value} percent of its primary energy from nuclear power.", measure: "nuclear_energy_share", unit: "% of primary energy", displayDecimals: 0 },
 ];
 
 export const medianOptions: { value: Exclude<MedianChoice, "skip">; label: string }[] = [
