@@ -38,8 +38,14 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Extract World Values Survey spreadsheets
+        run: npm run extract:wvs
+
       - name: Generate country data
         run: python scripts/prepare_country_data.py
+
+      - name: Verify WVS integration
+        run: npm run test:wvs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

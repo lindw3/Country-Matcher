@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:wvs": "node --test tests/wvs.test.mjs",
+    "extract:wvs": "node scripts/prepare_wvs_data.mjs",
+    "prepare:wvs": "npm run extract:wvs && node scripts/merge_wvs_into_snapshot.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -18,6 +21,7 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.25.12",
     "typescript": "~5.7.2"
   }
 }

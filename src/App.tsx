@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, Globe2, Minus, Plus, RotateCcw } from "lucide-react";
 import type { CountryDataset, MatchResult } from "./domain/country";
-import { formatMedianValue, formatValue, getMedianBands, measureDetails, scoreCountries } from "./domain/matching";
-import type { Answers, IdealChoice, MedianChoice } from "./domain/questions";
+import { formatMedianValue, formatValue, getMedianBands, measureDetails, scoreCountries, valueCoverageSummary } from "./domain/matching";
+import type { Answers, IdealChoice, MedianChoice, ValueChoice } from "./domain/questions";
+import SocialValueQuestion from "./SocialValueQuestion";
 import {
   createEmptyAnswers,
   idealOptions,
@@ -24,9 +25,10 @@ function readSavedAnswers(): Answers {
     return {
       ...createEmptyAnswers(),
       ...parsed,
-      points: parsed.points ?? {},
-      ideals: parsed.ideals ?? {},
-      medians: parsed.medians ?? {},
+      points: Object.fromEntries(Object.entries(parsed.points ?? {}).filter(([id]) => pointGroups.some((group) => group.id === id))),
+      ideals: Object.fromEntries(Object.entries(parsed.ideals ?? {}).filter(([id]) => idealStatements.some((statement) => statement.id === id))),
+      medians: Object.fromEntries(Object.entries(parsed.medians ?? {}).filter(([id]) => medianQuestions.some((question) => question.id === id))),
+      values: parsed.values ?? {},
     };
   } catch {
     return createEmptyAnswers();
@@ -59,6 +61,7 @@ function App() {
   const results = dataset ? scoreCountries(dataset, answers) : [];
   const activeAnswerCount = Object.keys(answers.ideals).length
     + Object.values(answers.medians).filter((answer) => answer !== "skip").length
+    + (dataset ? valueCoverageSummary(dataset, answers).answered : 0)
     + (answers.pointsSkipped ? 0 : 1);
 
   function openMethodology() {
@@ -109,8 +112,9 @@ function App() {
             onResumePoints={() => setAnswers((current) => ({ ...current, pointsSkipped: false }))}
             onIdealChange={(id, answer) => setAnswers((current) => ({ ...current, ideals: { ...current.ideals, [id]: answer } }))}
             onMedianChange={(id, answer) => setAnswers((current) => ({ ...current, medians: { ...current.medians, [id]: answer } }))}
+            onValueChange={(id, answer) => setAnswers((current) => ({ ...current, values: { ...current.values, [id]: answer } }))}
             onBack={() => sectionIndex > 0 ? setSectionIndex(sectionIndex - 1) : setScreen("intro")}
-            onNext={() => sectionIndex < 2 ? setSectionIndex(sectionIndex + 1) : finishQuestionnaire()}
+            onNext={() => sectionIndex < 3 ? setSectionIndex(sectionIndex + 1) : finishQuestionnaire()}
           />
         )}
         {screen === "report" && (
@@ -125,7 +129,7 @@ function App() {
             onBackToResults={() => setSelectedCountry(null)}
           />
         )}
-        {screen === "methodology" && <Methodology onBack={() => setScreen(returnScreen.current)} />}
+        {screen === "methodology" && <Methodology dataset={dataset} onBack={() => setScreen(returnScreen.current)} />}
       </main>
       <footer className="site-footer">
         <span>Built from public country-level indicators</span>
@@ -144,7 +148,7 @@ function Intro({ dataset, onStart, ready }: { dataset: CountryDataset | null; on
         <p className="intro-description">Take a stance on what your ideal country looks like. We’ll compare it with measured outcomes across countries and show which country is your best fit.</p>
         <div className="intro-actions">
           <button className="primary-button" onClick={onStart} disabled={!ready || !dataset}>Start the questions <ArrowRight size={17} /></button>
-          <span className="time-note">Takes approximately 5 minutes</span>
+          <span className="time-note">Takes approximately 10 minutes</span>
         </div>
         <div className="intro-footnote"><Check size={15} /> Your answers stay in this browser.</div>
       </div>
@@ -161,7 +165,7 @@ function Intro({ dataset, onStart, ready }: { dataset: CountryDataset | null; on
 
 function Questionnaire({
   dataset, sectionIndex, answers, onPointsChange, onSkipPoints, onResumePoints,
-  onIdealChange, onMedianChange, onBack, onNext,
+  onIdealChange, onMedianChange, onValueChange, onBack, onNext,
 }: {
   dataset: CountryDataset | null;
   sectionIndex: number;
@@ -171,10 +175,11 @@ function Questionnaire({
   onResumePoints: () => void;
   onIdealChange: (id: string, answer: IdealChoice) => void;
   onMedianChange: (id: string, answer: MedianChoice) => void;
+  onValueChange: (id: string, answer: ValueChoice) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
-  const sectionNames = ["Allocate 12 points", "Ideal society", "Relative to the median"];
+  const sectionNames = ["Allocate 15 points", "Ideal society", "Social values", "Relative to the median"];
   const pointsUsed = Object.values(answers.points).reduce((total, points) => total + points, 0);
   const pointsLeft = TOTAL_PRIORITY_POINTS - pointsUsed;
   const progress = ((sectionIndex + 1) / sectionNames.length) * 100;
@@ -191,7 +196,7 @@ function Questionnaire({
     <section className="quiz-view">
       <div className="quiz-heading">
         <button className="back-link" onClick={onBack}><ArrowLeft size={16} /> Back</button>
-        <div className="quiz-progress-copy"><span>YOUR PERSPECTIVE · {sectionNames[sectionIndex]}</span><span>{String(sectionIndex + 1).padStart(2, "0")} <i>/</i> 03</span></div>
+        <div className="quiz-progress-copy"><span>YOUR PERSPECTIVE · {sectionNames[sectionIndex]}</span><span>{String(sectionIndex + 1).padStart(2, "0")} <i>/</i> {String(sectionNames.length).padStart(2, "0")}</span></div>
         <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
       </div>
 
@@ -202,15 +207,17 @@ function Questionnaire({
             ? "Each group is scored from the average of its available measures, then weighted by the points you assign."
             : sectionIndex === 1
               ? "Agreement adds a positive multiplier. Disagreement adds a negative multiplier, reversing the preferred direction. Neutral statements have no effect."
-              : "A match in your chosen band scores highest. One band away remains positive, two bands away is neutral, and three or four bands away score increasingly negatively."}</p>
+              : sectionIndex === 2
+                ? "Choose the view closest to yours. Don't know or no opinion leaves that question out of your match."
+                : "A match in your chosen band scores highest. One band away remains positive, two bands away is neutral, and three or four bands away score increasingly negatively."}</p>
         </aside>
         <div className="question-main">
           {sectionIndex === 0 && (
             <>
               <div className="question-meta"><span className="question-number">01</span><span>Shared foundations</span></div>
               <h1>What should matter most in a society?</h1>
-              <p className="question-detail">Allocate 12 points across these areas. Every point increases that area's influence; you can place all 12 on one area.</p>
-              <div className="allocation-summary"><b>{answers.pointsSkipped ? "Point allocation skipped" : `${pointsUsed} / ${TOTAL_PRIORITY_POINTS} points allocated`}</b><span>{answers.pointsSkipped ? "The general score still applies." : `${pointsLeft} ${pointsLeft === 1 ? "point" : "points"} left to place`}</span></div>
+              <p className="question-detail">Allocate 15 points across these areas. Every point increases that area's influence.</p>
+              <div className="allocation-summary"><b>{answers.pointsSkipped ? "Point allocation skipped" : `${pointsUsed} / ${TOTAL_PRIORITY_POINTS} points allocated`}</b><span>{answers.pointsSkipped ? "Only answered preferences contribute." : `${pointsLeft} ${pointsLeft === 1 ? "point" : "points"} left to place`}</span></div>
               <div className={`allocation-list ${answers.pointsSkipped ? "is-disabled" : ""}`}>
                 {pointGroups.map((group) => {
                   const value = answers.points[group.id] ?? 0;
@@ -261,7 +268,20 @@ function Questionnaire({
 
           {sectionIndex === 2 && (
             <>
-              <div className="question-meta"><span className="question-number">03</span><span>Policy preferences</span></div>
+              <div className="question-meta"><span className="question-number">03</span><span>Social values</span></div>
+              <h1>Which values are closest to your heart?</h1>
+              <p className="question-detail">Choose the response that is closest to your own view. The answer choices reproduce the World Values Survey response scales. You may skip any item.</p>
+              <div className="value-list">
+                {(dataset?.wvsQuestions ?? []).map((question) => (
+                  <SocialValueQuestion key={question.id} question={question} answer={answers.values[question.id]} onChange={(answer) => onValueChange(question.id, answer)} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {sectionIndex === 3 && (
+            <>
+              <div className="question-meta"><span className="question-number">04</span><span>Policy preferences</span></div>
               <h1>How should your ideal country compare to the median?</h1>
               <p className="question-detail">Options show absolute value ranges calculated from the median of countries with data. You may skip any item.</p>
               <div className="median-list">
@@ -304,7 +324,7 @@ function Questionnaire({
               </button>
             ) : <span className="skip-hint">Unanswered items do not affect your score.</span>}
             <button className="primary-button next-button" onClick={onNext} disabled={!canContinue}>
-              {sectionIndex === 2 ? "See my matches" : "Continue"} <ArrowRight size={16} />
+              {sectionIndex === sectionNames.length - 1 ? "See my matches" : "Continue"} <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -331,8 +351,8 @@ function Report({
     return (
       <section className="empty-report">
         <p className="eyebrow"><span className="eyebrow-rule" /> YOUR MATCH REPORT</p>
-        <h1>No countries meet the data coverage requirement.</h1>
-        <p>Try changing or skipping some preferences. The general score always includes life satisfaction where data is available.</p>
+        <h1>No matches are available for these answers.</h1>
+        <p>Choose at least one preference to receive matches. If you have already answered questions, try changing some preferences to find countries with sufficient data.</p>
         <button className="primary-button" onClick={onEdit}>Review my answers <ArrowRight size={16} /></button>
       </section>
     );
@@ -351,7 +371,7 @@ function Report({
         <div><p className="eyebrow"><span className="eyebrow-rule" /> YOUR MATCH REPORT</p><h1>A society that fits <em>your priorities.</em></h1></div>
         <button className="icon-text-button" onClick={onRestart}><RotateCcw size={15} /> Start over</button>
       </div>
-      <div className="report-context">Based on {activeAnswerCount} answered preferences plus the general score</div>
+      <div className="report-context">Based on {activeAnswerCount} answered preferences</div>
       <div className="leader-panel">
         <div className="leader-rank"><span>01</span><span>YOUR CLOSEST FIT</span></div>
         <div className="leader-country"><h2>{leader.country.name}</h2><p>{leader.measureCount} matched measures · {Math.round(leader.coverage * 100)}% data coverage</p></div>
@@ -403,38 +423,47 @@ function CountryDetail({ result, onBack }: { result: MatchResult; onBack: () => 
       <p className="detail-lede">{Math.round(result.coverage * 100)}% of the weighted measures relevant to your answers are available for this country.</p>
       <div className="detail-table-wrap">
         <table className="detail-table">
-          <thead><tr><th>AREA / MEASURE</th><th>OBSERVED VALUE</th><th>YEAR</th><th>PEER POSITION</th><th>FIT</th></tr></thead>
+          <thead><tr><th>AREA / MEASURE</th><th>OBSERVED VALUE</th><th>YEAR</th><th>PEER POSITION</th><th>FIT</th><th>INFLUENCE</th></tr></thead>
           <tbody>
-            {details.map((item) => (
-              <tr key={`${item.label}-${item.area}`}>
-                <td><span className="table-area">{item.area}</span><b>{item.label}</b></td>
-                <td>{formatValue(item.value)} <span className="value-unit">{item.unit}</span><span className="mobile-year">{item.year}</span></td>
-                <td>{item.year}</td>
-                <td><span className="percentile-indicator"><i style={{ left: `${item.percentile}%` }} /></span>{ordinal(Math.round(item.percentile))}</td>
-                <td><b className="table-fit">{Math.round(item.score)}</b></td>
+            {details.map((item, index) => (
+              <Fragment key={`${item.label}-${item.area}`}>
+              {(index === 0 || details[index - 1].area !== item.area) && <tr className="summary-area-heading"><th colSpan={6} scope="rowgroup">{item.area}</th></tr>}
+              <tr>
+                <td><b>{item.label}</b>{item.priorityLabel && <span className="priority-source">{item.priorityLabel}</span>}</td>
+                <td>{item.value === null ? "Not available" : item.valueDecimals === undefined ? formatValue(item.value) : formatMedianValue(item.value, item.valueDecimals)} <span className="value-unit">{item.unit}</span><span className="mobile-year">{item.surveyPeriod ?? item.year ?? "Year not supplied"}</span></td>
+                <td>{item.surveyPeriod ?? item.year ?? "Not supplied"}</td>
+                <td>{item.percentile === null ? "Not available" : <><span className="percentile-indicator"><i style={{ left: `${item.percentile}%` }} /></span>{ordinal(Math.round(item.percentile))}</>}</td>
+                <td><b className="table-fit">{item.score === null ? "Not scored" : Math.round(item.score)}</b></td>
+                <td><b className="table-weight">{item.score === null ? "Excluded" : `×${formatValue(item.weight)}`}</b>{item.score !== null && <span className="weight-explanation">{item.measureCount > 1 ? `${item.measureCount}-measure average` : "single measure"}</span>}</td>
               </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="detail-note">Peer position is a percentile among countries with data. Median-question fit is based on the number of value bands between the country's band and your selected band.</p>
+      <p className="detail-note">All priority indicators and answered preferences are listed. Zero-point or skipped priority groups show Not scored / Excluded, even when country data is available. Not available means the country has no value. Excluded rows have no influence on scoring or coverage. Multi-measure priority groups are averaged first; their multiplier applies once to the group, not once per row.</p>
     </section>
   );
 }
 
-function Methodology({ onBack }: { onBack: () => void }) {
+function Methodology({ dataset, onBack }: { dataset: CountryDataset | null; onBack: () => void }) {
+  const referenceAnswers = createEmptyAnswers();
+  for (const question of dataset?.wvsQuestions ?? []) referenceAnswers.values[question.id] = question.minimum;
+  const coverage = dataset ? valueCoverageSummary(dataset, referenceAnswers) : null;
   return (
     <section className="methodology-view">
       <button className="back-link" onClick={onBack}><ArrowLeft size={16} /> Back</button>
       <p className="eyebrow"><span className="eyebrow-rule" /> HOW THE MATCH WORKS</p>
       <h1>State your preferences.<br /><em>Match it with the data.</em></h1>
       <div className="method-grid">
-        <article><span>01</span><h2>General score</h2><p>Life satisfaction is considered a "common good", and therefore always contributes to every country score, with higher values scoring higher. It has a fixed weight alongside the preferences you choose.</p></article>
-        <article><span>02</span><h2>Twelve priority points</h2><p>Points are distributed across nine shared-foundation areas. Each area averages its available measures, and the points weight that area's score.</p></article>
+        <article><span>01</span><h2>Your answers</h2><p>Only answered preferences contribute. There is no automatic general score; leaving every preference unanswered does not produce a country ranking.</p></article>
+        <article><span>02</span><h2>Fifteen priority points</h2><p>Allocate points across nine priority groups. Each point gives that group a multiplier of one, shared across its area's averaging denominator: two points among three contributions give an effective multiplier of two-thirds before accounting for missing data.</p></article>
         <article><span>03</span><h2>Ideal society</h2><p>Agreement gives a positive multiplier of 1 or 2; disagreement gives a negative multiplier of 1 or 2 and reverses the preference direction. “It doesn't matter” excludes the statement.</p></article>
         <article><span>04</span><h2>Median ranges</h2><p>Displayed ranges use the median thresholds and are rounded for readability. Matching compares the country's range category with yours: same band scores 100, one step away 75, two steps away is neutral at 50, three steps away 25, and four steps away 0.</p></article>
-        <article><span>05</span><h2>Country data</h2><p>Most indicators are sourced from <a href="https://ourworldindata.org/" target="_blank" rel="noreferrer">Our World in Data</a>. Each country uses its latest available observation per measure, so years can differ.</p></article>
+        <article><span>05</span><h2>Country data</h2><p>Most indicators are sourced from <a href="https://ourworldindata.org/" target="_blank" rel="noreferrer">Our World in Data</a>. Years can differ across indicators. The supplied World Values Survey data covers 2017–2022; the summary displays that period without inventing country-specific dates.</p></article>
         <article><span>06</span><h2>Interpret with care</h2><p>Indicators are imperfect proxies and include value judgments. The chosen indicators are largely based on what data is available across countries - not what is necessarily most important. Many countries have missing data which affects the ability to find a good match.</p></article>
+        <article><span>07</span><h2>Category weights</h2><p>Priority groups, ideal statements, social-values questions and median preferences all share the averaging denominator in their category. More questions do not automatically give a category more influence. Priority points retain their relative strength within that mean. Related equality and inclusion indicators share a category, but we never infer one of your views from another.</p></article>
+        <article><span>08</span><h2>Social-values coverage</h2><p>Countries need data for at least 70% of the substantive WVS questions you answer, as well as 40% overall weighted coverage. Don't know, no opinion, and skipped responses have no weight and do not count toward this requirement.{coverage && ` Answering all ${coverage.answered} WVS questions leaves ${coverage.eligible} of ${coverage.total} profiles meeting the WVS requirement; other data requirements can narrow results further.`}</p></article>
       </div>
       <button className="text-action method-back" onClick={onBack}>Return to the test <ArrowRight size={15} /></button>
     </section>

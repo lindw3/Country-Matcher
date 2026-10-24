@@ -1,14 +1,16 @@
 export type Direction = "high" | "low";
 export type IdealChoice = "doesnt-matter" | "disagree-fully" | "disagree-somewhat" | "agree-somewhat" | "agree-fully";
 export type MedianChoice = "much-lower" | "slightly-lower" | "near-median" | "slightly-higher" | "much-higher" | "skip";
+export type ValueChoice = number | "skip";
 export type Answers = {
   points: Record<string, number>;
   pointsSkipped: boolean;
   ideals: Record<string, IdealChoice>;
   medians: Record<string, MedianChoice>;
+  values: Record<string, ValueChoice>;
 };
 
-export const TOTAL_PRIORITY_POINTS = 12;
+export const TOTAL_PRIORITY_POINTS = 15;
 
 export type PointGroup = {
   id: string;
@@ -43,6 +45,11 @@ export const pointGroups: PointGroup[] = [
     ],
   },
   {
+    id: "lgbt",
+    label: "LGBT+ inclusion",
+    measures: [{ key: "lgbt_rights", direction: "high" }],
+  },
+  {
     id: "trust",
     label: "Social trust",
     measures: [{ key: "share_trust", direction: "high" }],
@@ -56,11 +63,6 @@ export const pointGroups: PointGroup[] = [
     ],
   },
   {
-    id: "health",
-    label: "Public healthcare investment",
-    measures: [{ key: "sjukvård_andel_gdp", direction: "high" }],
-  },
-  {
     id: "prosperity",
     label: "Prosperity and high employment",
     measures: [
@@ -70,7 +72,7 @@ export const pointGroups: PointGroup[] = [
   },
   {
     id: "climate",
-    label: "Lower carbon emissions",
+    label: "Climate and environmental priorities",
     measures: [{ key: "co2_percapita", direction: "low" }],
   },
   {
@@ -91,6 +93,7 @@ export const idealOptions: { value: IdealChoice; label: string; multiplier: numb
 export type IdealStatement = {
   id: string;
   statement: string;
+  area?: string;
   measures: { key: string; agreeDirection: Direction }[];
 };
 
@@ -107,34 +110,34 @@ export const idealStatements: IdealStatement[] = [
   {
     id: "traditional-family",
     statement: "Traditional family values have an important place in society.",
+    area: "Family values",
     measures: [
       { key: "women_married_union_share", agreeDirection: "high" },
       { key: "barn_per_kvinna", agreeDirection: "high" },
     ],
   },
   {
-    id: "urban-life",
-    statement: "A largely urban society.",
-    measures: [{ key: "urban_population_share", agreeDirection: "high" }],
-  },
-  {
     id: "religion",
     statement: "A religious population.",
+    area: "Religion",
     measures: [{ key: "share_religious", agreeDirection: "high" }],
   },
   {
     id: "work-hours",
     statement: "People spend less time working.",
+    area: "Work",
     measures: [{ key: "annual_working_hours", agreeDirection: "low" }],
   },
   {
     id: "migration",
-    statement: "A society with generous immigration policies.",
+    statement: "A culturally diverse population.",
+    area: "Immigration and openness",
     measures: [{ key: "migrant_population_share", agreeDirection: "high" }],
   },
   {
     id: "generative-ai",
     statement: "AI plays an important role in people's daily lives.",
+    area: "Technology",
     measures: [{ key: "generative_ai_adult_share", agreeDirection: "high" }],
   },
 ];
@@ -149,10 +152,9 @@ export type MedianQuestion = {
 };
 
 export const medianQuestions: MedianQuestion[] = [
-  { id: "aid", label: "Foreign aid", medianSentence: "The median country spends about {value} percent of its Gross National Income (GNI) on foreign aid.", measure: "bistånd_andel_bni", unit: "% of GNI", displayDecimals: 2 },
   { id: "tax", label: "Tax revenue", medianSentence: "The median country collects about {value} percent of its Gross Domestic Product (GDP) in taxes.", measure: "skatt_andel_bnp", unit: "% of GDP", displayDecimals: 0 },
   { id: "government-spending", label: "Government spending", medianSentence: "The median country spends about {value} percent of its GDP through government expenditure.", measure: "statligautgifter_andel_bnp", unit: "% of GDP", displayDecimals: 0 },
-  { id: "military", label: "Military spending", medianSentence: "The median country spends about {value} percent of its GDP on the military.", measure: "military_spending_gdp", unit: "% of GDP", displayDecimals: 0 },
+  { id: "military", label: "Military spending", medianSentence: "The median country spends about {value} percent of its GDP on the military.", measure: "military_spending_gdp", unit: "% of GDP", displayDecimals: 1 },
   { id: "renewable-energy", label: "Renewable energy", medianSentence: "The median country gets about {value} percent of its primary energy from renewable sources.", measure: "renewable_energy_share", unit: "% of primary energy", displayDecimals: 0 },
   { id: "nuclear-energy", label: "Nuclear energy", medianSentence: "The median country gets {value} percent of its primary energy from nuclear power.", measure: "nuclear_energy_share", unit: "% of primary energy", displayDecimals: 0 },
 ];
@@ -166,5 +168,5 @@ export const medianOptions: { value: Exclude<MedianChoice, "skip">; label: strin
 ];
 
 export function createEmptyAnswers(): Answers {
-  return { points: {}, pointsSkipped: false, ideals: {}, medians: {} };
+  return { points: {}, pointsSkipped: false, ideals: {}, medians: {}, values: {} };
 }

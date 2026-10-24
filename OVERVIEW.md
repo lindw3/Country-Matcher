@@ -5,32 +5,32 @@ Country Matcher compares a respondent's preferences for society with country-lev
 ## Current experience
 
 1. **Introduction** describes the purpose and starts the questionnaire once country data is available.
-2. **Questionnaire** has three sections: allocate twelve points across shared foundations, describe an ideal society through agreement choices, and select value ranges relative to six measure medians. The respondent can go back, skip the point allocation, choose “It doesn't matter” for an ideal statement, or skip each median item.
-3. **Results** shows the closest country, a top-three shortlist, score-group bars, fit score, and weighted data coverage. Life satisfaction always contributes to the general score, including when other preferences are skipped.
-4. **Country breakdown** lists the measures used for the country's score, with observed value, unit, year, peer percentile, and fit contribution.
+2. **Questionnaire** has four sections: allocate fifteen priority points, answer ideal-society statements, answer optional Social Values questions from WVS, and select median-relative rate ranges. Respondents can go back or skip preferences. Social Values retains the source answer scales and uses radio circles under “Which values are closest to your heart?”
+3. **Results** shows the closest country, a top-three shortlist, area-fit bars, fit score, and weighted coverage. Only answered preferences contribute; there is no automatic general score.
+4. **Country breakdown** groups all scored measures under their area headings. Priority allocations are explicitly labelled, and survey means display one decimal, the label “Mean response”, and the survey period 2017-2022.
 5. **Methodology** summarizes scoring and data caveats.
 
 The app uses in-page state rather than URL routes. Answers are saved in this browser's local storage under a versioned key; there is no account or server-side answer submission.
 
 ## Questionnaire
 
-### 1. Allocate twelve points
+### 1. Allocate fifteen points
 
-The respondent assigns exactly twelve integer points across these nine groups. All twelve points may go to one group. The whole section can instead be skipped.
+The respondent assigns exactly fifteen integer points across nine groups, including LGBT+ inclusion. All fifteen points may go to one group. The whole section can instead be skipped.
 
 | Group | Measures | Direction scored positively |
 | --- | --- | --- |
-| Reliable, abundant energy | `electricity_generation_per_capita`, `energi_percapita` | Higher values |
+| Energy | `electricity_generation_per_capita`, `energi_percapita` | Higher values; shared area with nuclear energy |
 | Democratic institutions and low corruption | `demokratiindex`, `korruption_index` | Higher democracy; lower corruption-index value |
 | Equality and gender opportunity | `lönegap`, `andel_kvinnor_arbete`, `gini` | Lower wage gap and Gini; higher women's-to-men's work participation ratio |
+| LGBT+ inclusion | `lgbt_rights` | Higher values |
 | Social trust | `share_trust` | Higher values |
 | Education | `skolår`, `utbildning_andel_gdp` | Higher values |
-| Public healthcare investment | `sjukvård_andel_gdp` | Higher values |
 | Prosperity and employment | `gdp_per_capita`, `unemployment_rate` | Higher GDP per person; lower unemployment |
 | Lower carbon emissions | `co2_percapita` | Lower values |
 | Personal safety | `mord_percapita` | Lower values |
 
-Each group's measure fit is averaged over the values available for a country. Its allocated points set the group's weight in the overall score.
+Each priority group counts as one contribution to its area. Allocated points supply its raw multiplier, which is divided by the number of answered contributions in that area. A multi-measure priority group averages its available measures first. For example, 2 points among 3 area contributions gives that group an effective multiplier of 2/3 before accounting for missing data. Priority indicators appear in the grouped summary with their allocation and effective influence.
 
 ### 2. “My ideal society is characterized by…”
 
@@ -40,7 +40,6 @@ The respondent chooses one of five responses for each statement: “It doesn't m
 | --- | --- | --- |
 | A healthy lifestyle is common. | `tobacco_use_adult_share`, `alcohol_consumption_per_capita`, `fetma_andel` | Lower values |
 | Traditional family values have an important place in society. | `women_married_union_share`, `barn_per_kvinna` | Higher values |
-| A large share of people live in urban areas. | `urban_population_share` | Higher values |
 | Religion has a visible place in society. | `share_religious` | Higher values |
 | People have shorter working hours and more time outside work. | `annual_working_hours` | Lower values |
 | A substantial share of residents were born in another country. | `migrant_population_share` | Higher values |
@@ -48,7 +47,13 @@ The respondent chooses one of five responses for each statement: “It doesn't m
 
 The response multipliers are 0 for “It doesn't matter”, -2 for “I don't agree at all”, -1 for “I somewhat disagree”, +1 for “I somewhat agree”, and +2 for “I agree fully”. A positive answer uses the agreement direction; a negative answer reverses it. The absolute multiplier is the group's weight.
 
-### 3. Median-relative rates
+### 3. Social Values
+
+All 17 supplied WVS tables are included. Short scales use one row of radio circles; ten-point scales use a slider with labelled endpoints and numbered radio positions. Agreement scales run from negative to positive while preserving original stored codes. Country means are reconstructed from substantive response shares. Fit is 100 times one minus the absolute answer-to-mean distance divided by the scale range. “Don't know / no opinion” is a separate gray choice and is equivalent to skipping: it contributes no weight. Optional responses are averaged by shared category, so question counts do not increase a topic's influence.
+
+Coverage is consequential: 91 of the current 222 profiles have WVS indicators, and 49 have all 17. Coverage information is presented in Our Methodology, not in the quiz. See [WVS.md](WVS.md) for the full area taxonomy and limitations. Survey rows show 2017-2022 in the Year column. Work groups working hours and work-as-duty; Military and national defence groups military spending and willingness to fight. Taxes and government spending is separate from Political outlook; Religion is separate from Family values.
+
+### 4. Median-relative rates
 
 For each measure, the questionnaire calculates the median across countries with a value in the generated snapshot. It displays the median and five absolute value bands with units. For a positive median, band boundaries are:
 
@@ -60,32 +65,23 @@ For each measure, the questionnaire calculates the median across countries with 
 | Slightly higher | 125% to 150% of the median |
 | Much higher | Above 150% of the median |
 
-Each rate is introduced in a plain-language sentence that includes its median, followed by “How much do you think is appropriate?” Foreign aid (`bistånd_andel_bni`) is displayed to two decimal places. Tax revenue (`skatt_andel_bnp`), government spending (`statligautgifter_andel_bnp`), military spending (`military_spending_gdp`), renewable energy share (`renewable_energy_share`), and nuclear energy share (`nuclear_energy_share`) are displayed as whole percentages. Scoring uses unrounded medians and boundaries. Any item can be skipped.
+Each of the five rates is introduced with its median and “How much do you think is appropriate?” Military spending displays one decimal; tax revenue, government spending, renewable energy share, and nuclear energy share display whole percentages. Scoring uses unrounded values. Foreign aid is not included. Any item can be skipped.
 
 If the median is zero or below, relative percentages cannot define useful ranges. The app uses percentile cutoffs across distinct observed values instead, which avoids impossible negative ranges and reduces duplicate boundaries where the data varies. The true median remains visible and the interface identifies this fallback.
 
-## General score and match calculation
+## Match calculation
 
-Life satisfaction (`livstillfredsställelse`) always contributes to a fixed-weight General score; higher country percentiles score higher. Its fixed weight is 1, separate from the respondent's twelve priority points.
+Only answered preferences contribute. Life satisfaction is not extracted or scored, and skipping every preference yields no ranking.
 
-Direction-based measures use their percentile among countries with data. A higher-is-better value scores at its percentile; a lower-is-better value scores at `100 - percentile`. Point groups average their available measure scores and use the points assigned as their weight. Ideal statements use the direction and signed-strength rules above. Each answered median preference has weight one. Median matching compares the country's band category to the chosen category: same band scores 100, one step away 75, two steps away is neutral at 50, three steps away 25, and four steps away 0. Each band step changes fit by 25 points relative to neutral.
+Direction-based measures use their percentile among countries with data. A higher-is-better value scores at its percentile; a lower-is-better value scores at `100 - percentile`. Point groups average their available measure scores and use the points assigned as their weight. Ideal statements use the direction and signed-strength rules above. Median preferences have base strength one before category normalization. Median matching compares the country's band category to the chosen category: same band scores 100, one step away 75, two steps away is neutral at 50, three steps away 25, and four steps away 0. Each band step changes fit by 25 points relative to neutral.
 
-All active groups are combined as a weighted average. If some measures in a group are missing, that group's effective weight is reduced in proportion to the available measures. Coverage is the share of expected weighted data available for that country. A country needs at least 40% coverage and some available score weight to appear. Results are ordered by score, with coverage as a tie-breaker; the report displays the top three.
+Priority indicator groups, WVS questions, ideal statements, and median preferences all share their area's averaging denominator. Each contribution's strength is divided by the number of answered contributions in that area. Priority strength equals its allocated points; ideal strength is one or two; WVS and median strengths are one. LGBT+ and Income equality are distinct areas; no unexpressed preferences are inferred. Missing indicators reduce effective weight in proportion to availability. Countries need at least 40% weighted coverage and at least 70% coverage by count of answered WVS questions. Results are ordered by score, then coverage; the report shows the top three.
 
-## Measures not currently used
+## Indicator Inventory and Summary
 
-The data snapshot contains all 40 measures loaded by `scripts/load_data.py`. These eight do not currently affect a questionnaire response or score:
+The snapshot contains 29 base measures and 17 WVS indicators, all referenced by the questionnaire. No unused indicators are retained. Foreign aid, healthcare spending, life satisfaction, urban population, and the former unused base measures are not extracted.
 
-- `livslängd`
-- `suicid/100k`
-- `hdi`
-- `handel_andel_gdp`
-- `död_i_konflikt_percapita`
-- `armed_forces_labor_share`
-- `pm25_exposure`
-- `conflict_deaths`
-
-The OWID conflict deaths measure and the local `conflict_deaths` series are both unused. The local series is an absolute count, not a per-capita rate.
+Every priority indicator and answered preference appears in the grouped summary. Zero-point or skipped priority groups retain available country values but display **Not scored / Excluded**. They do not affect scores, matched-measure counts, area-averaging denominators, or coverage. If country data is missing, the row also displays **Not available**. Missing values are never imputed. Unanswered or skipped non-priority questions do not appear as active preferences.
 
 ## Data limitations
 

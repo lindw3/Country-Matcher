@@ -1,6 +1,6 @@
 export type CountryMeasure = {
   value: number;
-  year: number;
+  year: number | null;
   percentile: number;
 };
 
@@ -14,6 +14,25 @@ export type CountryDataset = {
   countryCount: number;
   measureCount: number;
   countries: Country[];
+  wvsQuestions?: WvsQuestion[];
+};
+
+export type WvsOption = {
+  value: number;
+  label: string;
+  scored: boolean;
+};
+
+export type WvsQuestion = {
+  id: string;
+  prompt: string;
+  area: string;
+  source: string;
+  file: string;
+  surveyPeriod?: string;
+  options: WvsOption[];
+  minimum: number;
+  maximum: number;
 };
 
 export type MatchResult = {
@@ -25,10 +44,15 @@ export type MatchResult = {
   details: {
     label: string;
     unit: string;
-    value: number;
-    year: number;
-    percentile: number;
-    score: number;
+    value: number | null;
+    year: number | null;
+    percentile: number | null;
+    score: number | null;
     area: string;
+    weight: number;
+    measureCount: number;
+    surveyPeriod?: string;
+    valueDecimals?: number;
+    priorityLabel?: string;
   }[];
 };

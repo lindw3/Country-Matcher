@@ -11,6 +11,7 @@ From the project root:
 ```sh
 python -m pip install -r requirements.txt
 npm install
+npm run extract:wvs
 python scripts/prepare_country_data.py
 npm run dev
 ```
@@ -22,6 +23,8 @@ Create a production build with:
 ```sh
 npm run build
 ```
+
+For WVS-only source updates without fetching OWID, run `npm run prepare:wvs`. Run `npm run test:wvs` to verify the spreadsheet import, coverage audit, and matching behavior. See [WVS.md](WVS.md) for per-question coverage, area assignments, source-name decisions, and methodological assumptions.
 
 ## GitHub Pages
 
@@ -36,8 +39,10 @@ In the repository settings, set **Pages → Build and deployment → Source** to
 - `src/domain/matching.ts` contains the current fit-scoring rules and country detail metadata.
 - `src/domain/country.ts` defines the browser data types.
 - `src/styles.css` defines the visual system and responsive layouts.
-- `scripts/load_data.py` loads the 40 source measures and provides their descriptions.
-- `scripts/prepare_country_data.py` selects each country's latest usable value per measure and exports the JSON snapshot.
+- `scripts/load_data.py` loads 29 base measures. Together with 17 WVS indicators, every stored indicator is used by the questionnaire. Removed or unused measures are not downloaded or included in the snapshot.
+- `scripts/prepare_country_data.py` prepares base country values and invokes the shared WVS merger for the final snapshot.
+- `scripts/prepare_wvs_data.mjs` extracts original WVS labels and country response-share means from all supplied XLS files.
+- `scripts/merge_wvs_into_snapshot.mjs` merges WVS values into the snapshot and writes the country coverage audit.
 - `scripts/create_dataset.py` can create a historical outer-joined Parquet table; the website does not currently read that table.
 - `data/` contains the local OWID extracts and Gini workbook used by the loader.
 

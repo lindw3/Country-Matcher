@@ -32,24 +32,24 @@ Country Matcher/
 ## Browser screens
 
 - **Introduction** describes the comparison, displays dataset counts, and starts the questionnaire when country data has loaded.
-- **Questionnaire** has three sections: allocate twelve points, set ideal-society statement preferences, and choose median-relative ranges. It supports back/continue navigation and skipped preferences.
+- **Questionnaire** has four sections: allocate fifteen points, ideal-society preferences, optional WVS Social Values responses, and median-relative ranges. It supports back/continue navigation and skips.
 - **Results** shows the top match, the top-three shortlist, score-group bars, and weighted coverage.
 - **Country breakdown** shows every active measure contribution with raw value and unit, observation year, peer percentile, and fit score.
 - **Methodology** summarizes the scoring rules and limitations and returns to the previous app screen.
 
 ## Questionnaire and scoring
 
-`src/domain/questions.ts` defines nine point groups. The respondent allocates exactly twelve integer points across them or skips the allocation. The file also defines seven ideal-society statements, each offering “It doesn't matter”, full or partial disagreement, and partial or full agreement; and six median questions. Median questions can be skipped individually.
+`src/domain/questions.ts` defines nine priority groups, six ideal statements, five median questions, and WVS answer types. Healthcare-spending and foreign-aid questions are excluded. Respondents allocate fifteen points or skip the allocation. Saved points and responses for removed questions are filtered out when loading answers. WVS definitions and source scales travel in `wvsQuestions`; responses are stored under `answers.values`.
 
 Ideal response multipliers are 0, -2, -1, +1, and +2. Positive values use the direction associated with agreeing with the statement, negative values reverse that direction, and the absolute value determines the statement's weight. “It doesn't matter” contributes no group.
 
-`src/domain/matching.ts` always adds life satisfaction (`livstillfredsställelse`) as a higher-is-better General score with fixed weight 1. Each allocated point group averages the scores of its available measures and uses its point count as a weight. Ideal-statement groups score their configured measures in the agreement direction or its inverse, weighted by multiplier magnitude.
+`src/domain/matching.ts` only scores answered preferences. Priority groups average their available statistical measures and use allocated points as their raw multiplier. Ideal statements use agreement direction or its inverse and strength one or two. Every contribution, including priority groups, shares its area's averaging denominator. There is no life-satisfaction extraction or fixed General score.
 
-For each median question, the browser calculates the median of the latest country values present in `countries.json` and embeds it in a plain-language sentence. For a positive median, the five bands are below 50%, 50-75%, 75-125%, 125-150%, and above 150% of the median. The UI displays boundaries as absolute values with units. Foreign aid is displayed to two decimal places; other rates are rounded to whole percentages. A country's category is determined from the unrounded boundaries. Matching is ordinal: same category scores 100, one step away 75, two steps away 50 (neutral), three steps away 25, and four steps away 0, changing by 25 points per step from the neutral midpoint. If the median is zero or below, cutoffs use percentiles over distinct observed values instead, avoiding invalid negative ranges and reducing repeated cutoffs; the true median remains visible and the UI explains the fallback.
+For each median question, the browser calculates the median of the latest country values and embeds it in a sentence. Positive-median boundaries are 50%, 75%, 125%, and 150% of the median. Military spending is displayed to one decimal; other rates use whole percentages. Categories use unrounded boundaries and score 100, 75, 50, 25, or 0 by step distance. Zero-median items retain the distinct-value percentile fallback.
 
-All active score groups are combined as a weighted average. Each answered median preference has weight one. When only part of a group's measures is available for a country, both its effective score weight and its contribution to coverage are scaled by the available fraction. A country requires at least 40% weighted coverage and some available score weight. Results are ordered by score and then coverage; twenty candidates are computed and the report displays the first three.
+All active score groups are combined as a weighted average. WVS, ideal, median, and priority strengths are divided by the number of answered contributions in their shared category. A priority group counts once even if it contains several raw measures; WVS questions count individually. When only part of a group's measures is available, effective score weight and coverage are scaled by the available fraction. Countries require at least 40% weighted coverage and nonzero score weight; WVS eligibility separately requires 70% coverage by answered-question count. Results are ordered by score, then coverage. Detail rows are grouped contiguously by area and include priority-allocation labels, effective multipliers, one-decimal survey means, and survey periods.
 
-The exact currently scored and unused measures are listed in [OVERVIEW.md](OVERVIEW.md).
+The current inventory and summary behavior are described in [OVERVIEW.md](OVERVIEW.md). Summary evidence includes all priority groups, including zero-point/skipped groups, and every active non-priority preference. Zero-weight priority groups are display-only: they retain available values and percentiles but have null fit scores and zero influence. They are excluded from category counts, scoring, matched-measure counts, and coverage. Missing country values and percentiles are null and never imputed.
 
 ## Data preparation
 
@@ -67,13 +67,19 @@ The JSON root contains `generatedAt`, `countryCount`, `measureCount`, and `count
 
 The preparation script computes average-rank percentiles over countries with a value for that measure. It keeps the latest non-missing observation separately for each country and measure. This creates a mixed-year snapshot without a maximum observation age or shared-year rule. Source years travel with values into the country detail view.
 
-`load_data.py` keeps OWID measures in one catalog of internal measure key, Grapher source, and optional source-column hint. A shared adapter identifies `Entity`, `Year` or `Day`, and the value column, then normalizes output to `land`, `år`, and the configured measure key. With no hint, exactly one numeric value column must be identifiable. Hints disambiguate sources with multiple numeric columns. The marriage/union series chooses the observed estimate rather than projections; generative-AI daily rows are reduced to the latest observation per country-year. Local CSVs and the Gini workbook use local readers. The variable description table covers all forty loaded measures.
+`load_data.py` keeps OWID measures in one catalog of internal measure key, Grapher source, and optional source-column hint. A shared adapter identifies `Entity`, `Year` or `Day`, and the value column, then normalizes output to `land`, `år`, and the configured measure key. With no hint, exactly one numeric value column must be identifiable. Hints disambiguate sources with multiple numeric columns. The marriage/union series chooses the observed estimate rather than projections; generative-AI daily rows are reduced to the latest observation per country-year. Local CSVs and the Gini workbook use local readers. The variable description table documents the base loader's measures; WVS metadata is generated separately from its source spreadsheets.
 
 Country names are normalized through `pycountry.countries.lookup` with a small alias map. Unresolved names are omitted; recognized territories can appear. `scripts/create_dataset.py` separately creates an outer-joined historical Parquet file; the website does not read it.
 
 ## Current boundaries
 
-- All 40 loaded measures appear in the generated snapshot. Thirty-two affect questionnaire questions or scores; the other eight are named in [OVERVIEW.md](OVERVIEW.md).
+- The current snapshot has 29 base measures and 17 WVS indicators. Regression tests require exact equality between stored and questionnaire indicator keys, preventing unused stored indicators.
 - Country detail displays value, year, percentile, and fit, but not per-row OWID source URLs.
 - The country snapshot must be generated before serving the app. The GitHub Pages workflow regenerates it during deployment.
-- There is no automated test suite configured. `npm run build` performs the TypeScript project build and Vite production bundle.
+- `npm run test:wvs` checks WVS source labels, reconstructed means, coverage, and scoring. `npm run build` performs the TypeScript project build and Vite production bundle. The Pages workflow extracts the XLS files, builds the snapshot using the shared WVS merger, and runs the WVS tests before deployment.
+
+## WVS Integration
+
+`scripts/prepare_wvs_data.mjs` reads the supplied XLS tables and includes `surveyPeriod: "2017-2022"`. The shared merger writes the snapshot and coverage audit. Country-specific years remain null; each WVS summary row displays the period in its Year column, including a fallback for older metadata. Work combines work-as-duty with working hours; Military and national defence combines willingness to fight with military spending. The full current area taxonomy is in [WVS.md](WVS.md) and is applied in both scoring and summary grouping.
+
+WVS fit uses scale-normalized distance from country response-share means, without rounding values for scoring. Means are rounded to one decimal for summary display only. All answer strengths, including point allocations, are normalized by the number of answered contributions in their area. Countries must meet 70% coverage by count of answered WVS questions and the 40% overall weighted-data threshold. Coverage information appears only in Methodology. `src/SocialValueQuestion.tsx` renders one-row radios or sliders; `src/domain/socialValues.ts` defines display ordering and area aliases without recoding stored responses. Sources, coverage, and weighting assumptions are documented in [WVS.md](WVS.md).

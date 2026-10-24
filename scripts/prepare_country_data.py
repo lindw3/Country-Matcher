@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -12,6 +13,7 @@ from load_data import load_data
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "public" / "data" / "countries.json"
+WVS_VALUES = ROOT / "data" / "wvs_values.json"
 COUNTRY_ALIASES = {
     "Bolivia": "Bolivia, Plurinational State of",
     "Iran": "Iran, Islamic Republic of",
@@ -63,6 +65,10 @@ def prepare_country_data():
                 "percentile": round(float(row["percentile"]), 2),
             }
 
+    if not WVS_VALUES.exists():
+        raise FileNotFoundError(
+            "data/wvs_values.json is missing. Run `node scripts/prepare_wvs_data.mjs` first."
+        )
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "generatedAt": date.today().isoformat(),
@@ -74,6 +80,7 @@ def prepare_country_data():
         ],
     }
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=True), encoding="utf-8")
+    subprocess.run(["node", str(ROOT / "scripts" / "merge_wvs_into_snapshot.mjs")], check=True)
     print(f"Created {OUTPUT.relative_to(ROOT)}: {len(countries)} countries, {len(measures)} measures")
 
 
